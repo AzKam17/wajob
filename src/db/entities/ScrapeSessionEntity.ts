@@ -21,7 +21,7 @@ export class ScrapeSessionEntity extends BaseEntity {
   mode!: 'manual' | 'automatic'
 
   @Column()
-  status!: 'pending' | 'in_progress' | 'completed' | 'failed'
+  status!: 'completed' | 'failed'
 
   @Column('datetime')
   startedAt!: Date
