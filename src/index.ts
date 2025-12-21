@@ -1,49 +1,50 @@
 import { Elysia } from 'elysia'
 import { cron } from '@elysiajs/cron'
+import { elylog } from '@eajr/elylog'
 import { env } from '@yolk-oss/elysia-env'
 import { envSchema } from '@config/env.schema'
 import { initializeDatabase } from './db'
 import { ScraperSourceRepository } from './db/repositories/ScraperSourceRepository'
 import { ScrapeSchedulerService } from './services/scrape-scheduler.service'
-import { startScrapeWorker } from './workers/scrape.worker'
+import { startScrapeWorker, stopScrapeWorker } from './workers/scrape.worker'
 import { closeRedisConnection } from '@config/redis'
 import { closeScrapeQueue } from './queues/scrape.queue'
+import { Logger } from './utils/logger'
 
 // Initialize database
 await initializeDatabase()
+Logger.success('Database initialized')
 
 const app = new Elysia()
+  .use(elylog())
   .use(env(envSchema))
   .decorate('scraperSourceRepo', new ScraperSourceRepository())
-  .onStart(async (context) => {
-    console.log('🚀 Starting application...')
-
-    const envVars = context.env as any
+  .onStart(async () => {
+    Logger.info('Starting application')
 
     // Start BullMQ worker
     startScrapeWorker(
-      envVars.REDIS_HOST,
-      parseInt(envVars.REDIS_PORT),
-      envVars.REDIS_PASSWORD
+      process.env.REDIS_HOST || 'localhost',
+      parseInt(process.env.REDIS_PORT || '6379'),
+      process.env.REDIS_PASSWORD
     )
 
-    console.log('✅ Application started successfully')
+    Logger.success('Application started successfully')
   })
   .use(
     cron({
       name: 'scrape-checker',
-      pattern: '*/5 * * * *', // Every 5 minutes
+      pattern: '* */2 * * * *', // Every 2 minutes
       async run() {
-        const envVars = process.env
         const scraperSourceRepo = new ScraperSourceRepository()
 
         const scheduler = new ScrapeSchedulerService(
           scraperSourceRepo,
-          envVars.REDIS_HOST || 'localhost',
-          parseInt(envVars.REDIS_PORT || '6379'),
-          envVars.REDIS_PASSWORD,
-          parseInt(envVars.DEFAULT_SCRAPE_INTERVAL_MINUTES || '30'),
-          parseInt(envVars.MAX_PAGES_PER_SCRAPE || '3')
+          process.env.REDIS_HOST || 'localhost',
+          parseInt(process.env.REDIS_PORT || '6379'),
+          process.env.REDIS_PASSWORD,
+          parseInt(process.env.DEFAULT_SCRAPE_INTERVAL_MINUTES || '30'),
+          parseInt(process.env.MAX_PAGES_PER_SCRAPE || '3')
         )
 
         await scheduler.checkAndEnqueueScrapingTasks()
@@ -68,20 +69,18 @@ const app = new Elysia()
   .listen(parseInt(process.env.PORT || '3000'))
 
 // Graceful shutdown
-process.on('SIGTERM', async () => {
-  console.log('SIGTERM received, shutting down gracefully...')
+const shutdown = async (signal: string) => {
+  Logger.info(`${signal} received, shutting down gracefully`)
+  await stopScrapeWorker()
   await closeScrapeQueue()
   await closeRedisConnection()
   process.exit(0)
-})
+}
 
-process.on('SIGINT', async () => {
-  console.log('SIGINT received, shutting down gracefully...')
-  await closeScrapeQueue()
-  await closeRedisConnection()
-  process.exit(0)
-})
+process.on('SIGTERM', () => shutdown('SIGTERM'))
+process.on('SIGINT', () => shutdown('SIGINT'))
 
-console.log(
-  `🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`
-)
+Logger.success('Server running', {
+  host: app.server?.hostname,
+  port: app.server?.port,
+})

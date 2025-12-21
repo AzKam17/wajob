@@ -1,5 +1,6 @@
 import { ScraperSourceRepository } from '@/db/repositories/ScraperSourceRepository'
 import { getScrapeQueue } from '../queues/scrape.queue'
+import { Logger } from '../utils/logger'
 
 export class ScrapeSchedulerService {
   constructor(
@@ -12,18 +13,19 @@ export class ScrapeSchedulerService {
   ) {}
 
   async checkAndEnqueueScrapingTasks(): Promise<void> {
-    console.log('\n⏰ Checking for sources that need scraping...')
+    Logger.info('Checking for sources that need scraping')
 
     try {
-      // Get all active sources
       const activeSources = await this.scraperSourceRepo.findActiveModels()
 
       if (activeSources.length === 0) {
-        console.log('ℹ️  No active scraper sources found')
+        Logger.info('No active scraper sources found')
         return
       }
 
-      console.log(`📋 Found ${activeSources.length} active source(s)`)
+      Logger.info('Found active sources', {
+        count: activeSources.length,
+      })
 
       const now = new Date()
       const queue = getScrapeQueue(
@@ -33,12 +35,12 @@ export class ScrapeSchedulerService {
       )
 
       let enqueuedCount = 0
+      const results: any[] = []
 
       for (const source of activeSources) {
         const shouldScrape = this.shouldScrapeNow(source, now)
 
         if (shouldScrape.should) {
-          // Enqueue scraping job
           await queue.add(`scrape-${source.name}`, {
             sourceId: source.id!,
             sourceName: source.name,
@@ -47,27 +49,42 @@ export class ScrapeSchedulerService {
 
           enqueuedCount++
 
-          console.log(`
-🚀 ENQUEUED: ${source.name}
-   Reason: ${shouldScrape.reason}
-   Next check: ${this.getNextScrapeTime(source, now).toISOString()}
-          `)
+          Logger.success('Source enqueued for scraping', {
+            source: source.name,
+            reason: shouldScrape.reason,
+            nextCheck: this.getNextScrapeTime(source, now).toISOString(),
+          })
+
+          results.push({
+            source: source.name,
+            action: 'enqueued',
+            reason: shouldScrape.reason,
+          })
         } else {
-          console.log(`
-⏸️  SKIPPED: ${source.name}
-   Reason: ${shouldScrape.reason}
-   Next scrape: ${this.getNextScrapeTime(source, now).toISOString()}
-          `)
+          Logger.debug('Source skipped', {
+            source: source.name,
+            reason: shouldScrape.reason,
+            nextScrape: this.getNextScrapeTime(source, now).toISOString(),
+          })
+
+          results.push({
+            source: source.name,
+            action: 'skipped',
+            reason: shouldScrape.reason,
+          })
         }
       }
 
       if (enqueuedCount > 0) {
-        console.log(`\n✅ Enqueued ${enqueuedCount} scraping job(s)`)
+        Logger.success('Scraping tasks enqueued', {
+          enqueued: enqueuedCount,
+          total: activeSources.length,
+        })
       } else {
-        console.log('\nℹ️  No sources need scraping at this time')
+        Logger.info('No sources need scraping at this time')
       }
     } catch (error) {
-      console.error('❌ Error checking scraping tasks:', error)
+      Logger.error('Error checking scraping tasks', { error })
       throw error
     }
   }
@@ -76,17 +93,14 @@ export class ScrapeSchedulerService {
     source: any,
     now: Date
   ): { should: boolean; reason: string } {
-    // Check if manually flagged to scrape
     if (source.shouldScrapeNext) {
       return { should: true, reason: 'Manually flagged for scraping' }
     }
 
-    // If never scraped before, scrape now
     if (!source.lastScrapedAt) {
       return { should: true, reason: 'Never scraped before' }
     }
 
-    // Check if enough time has passed based on scrape interval
     const intervalMinutes =
       source.scrapeInterval || this.defaultScrapeIntervalMinutes
     const timeSinceLastScrape =
@@ -95,14 +109,14 @@ export class ScrapeSchedulerService {
     if (timeSinceLastScrape >= intervalMinutes) {
       return {
         should: true,
-        reason: `${Math.floor(timeSinceLastScrape)} minutes elapsed (interval: ${intervalMinutes}m)`,
+        reason: `${Math.floor(timeSinceLastScrape)}m elapsed (interval: ${intervalMinutes}m)`,
       }
     }
 
     const remainingMinutes = Math.ceil(intervalMinutes - timeSinceLastScrape)
     return {
       should: false,
-      reason: `Only ${Math.floor(timeSinceLastScrape)} minutes elapsed, need ${intervalMinutes}m (${remainingMinutes}m remaining)`,
+      reason: `${Math.floor(timeSinceLastScrape)}m/${intervalMinutes}m (${remainingMinutes}m remaining)`,
     }
   }
 

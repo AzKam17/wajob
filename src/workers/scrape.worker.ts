@@ -1,28 +1,28 @@
 import { Worker, Job } from 'bullmq'
 import { getRedisConnection } from '@config/redis'
 import { ScrapeJobData } from '../queues/scrape.queue'
+import { Logger } from '../utils/logger'
 
 let scrapeWorker: Worker<ScrapeJobData> | null = null
 
 async function processScrapeJob(job: Job<ScrapeJobData>): Promise<void> {
   const { sourceId, sourceName, maxPages } = job.data
 
-  console.log(`
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🔄 SCRAPING JOB RECEIVED
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Source ID:   ${sourceId}
-Source Name: ${sourceName}
-Max Pages:   ${maxPages}
-Job ID:      ${job.id}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  `)
+  Logger.info('Scraping job started', {
+    jobId: job.id,
+    sourceId,
+    sourceName,
+    maxPages,
+  })
 
   // TODO: Implement actual scraping logic here
-  // For now, just log that we would scrape
   await new Promise((resolve) => setTimeout(resolve, 1000))
 
-  console.log(`✅ Would scrape ${sourceName} (max ${maxPages} pages)`)
+  Logger.success('Scraping job completed', {
+    jobId: job.id,
+    sourceName,
+    message: `Would scrape ${sourceName} (max ${maxPages} pages)`,
+  })
 }
 
 export function startScrapeWorker(
@@ -41,26 +41,30 @@ export function startScrapeWorker(
     processScrapeJob,
     {
       connection,
-      concurrency: 2, // Process 2 scrape jobs concurrently
+      concurrency: 2,
     }
   )
 
   scrapeWorker.on('completed', (job) => {
-    console.log(`✅ Job ${job.id} completed for ${job.data.sourceName}`)
+    Logger.success('Worker completed job', {
+      jobId: job.id,
+      sourceName: job.data.sourceName,
+    })
   })
 
   scrapeWorker.on('failed', (job, err) => {
-    console.error(
-      `❌ Job ${job?.id} failed for ${job?.data.sourceName}:`,
-      err.message
-    )
+    Logger.error('Worker job failed', {
+      jobId: job?.id,
+      sourceName: job?.data.sourceName,
+      error: err.message,
+    })
   })
 
   scrapeWorker.on('error', (err) => {
-    console.error('Worker error:', err)
+    Logger.error('Worker error', { error: err.message })
   })
 
-  console.log('Scrape worker started')
+  Logger.success('Scrape worker started', { concurrency: 2 })
 
   return scrapeWorker
 }
@@ -69,6 +73,6 @@ export async function stopScrapeWorker(): Promise<void> {
   if (scrapeWorker) {
     await scrapeWorker.close()
     scrapeWorker = null
-    console.log('Scrape worker stopped')
+    Logger.info('Scrape worker stopped')
   }
 }

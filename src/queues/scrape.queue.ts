@@ -1,5 +1,6 @@
 import { Queue } from 'bullmq'
 import { getRedisConnection } from '@config/redis'
+import { Logger } from '../utils/logger'
 
 export interface ScrapeJobData {
   sourceId: string
@@ -27,7 +28,7 @@ export function getScrapeQueue(
         },
         removeOnComplete: {
           count: 100,
-          age: 24 * 3600, // 24 hours
+          age: 24 * 3600,
         },
         removeOnFail: {
           count: 500,
@@ -35,7 +36,7 @@ export function getScrapeQueue(
       },
     })
 
-    console.log('Scrape queue initialized')
+    Logger.success('Scrape queue initialized')
   }
 
   return scrapeQueue
@@ -45,6 +46,6 @@ export async function closeScrapeQueue(): Promise<void> {
   if (scrapeQueue) {
     await scrapeQueue.close()
     scrapeQueue = null
-    console.log('Scrape queue closed')
+    Logger.info('Scrape queue closed')
   }
 }

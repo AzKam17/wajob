@@ -1,4 +1,5 @@
 import Redis from 'ioredis'
+import { Logger } from '../utils/logger'
 
 let redisClient: Redis | null = null
 
@@ -16,11 +17,11 @@ export function getRedisConnection(
     })
 
     redisClient.on('connect', () => {
-      console.log('Redis connected successfully')
+      Logger.success('Redis connected', { host, port })
     })
 
     redisClient.on('error', (err) => {
-      console.error('Redis connection error:', err)
+      Logger.error('Redis connection error', { error: err.message })
     })
   }
 
@@ -31,6 +32,6 @@ export async function closeRedisConnection(): Promise<void> {
   if (redisClient) {
     await redisClient.quit()
     redisClient = null
-    console.log('Redis connection closed')
+    Logger.info('Redis connection closed')
   }
 }
