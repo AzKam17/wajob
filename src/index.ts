@@ -1,6 +1,5 @@
 import { Elysia } from 'elysia'
 import { cron } from '@elysiajs/cron'
-import { elylog } from '@eajr/elylog'
 import { env } from '@yolk-oss/elysia-env'
 import { envSchema } from '@config/env.schema'
 import { initializeDatabase } from './db'
@@ -16,7 +15,6 @@ await initializeDatabase()
 Logger.success('Database initialized')
 
 const app = new Elysia()
-  .use(elylog())
   .use(env(envSchema))
   .decorate('scraperSourceRepo', new ScraperSourceRepository())
   .onStart(async () => {
