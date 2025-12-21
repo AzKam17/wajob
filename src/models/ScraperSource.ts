@@ -11,6 +11,10 @@ export interface ScraperSourceData {
 }
 
 export class ScraperSource {
+  id?: string
+  createdAt?: Date
+  updatedAt?: Date
+
   name: string
   url: string
   lastScrapedAt?: Date
@@ -57,6 +61,9 @@ export class ScraperSource {
 
   toJSON() {
     return {
+      id: this.id,
+      createdAt: this.createdAt,
+      updatedAt: this.updatedAt,
       name: this.name,
       url: this.url,
       lastScrapedAt: this.lastScrapedAt,

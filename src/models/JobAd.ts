@@ -6,6 +6,10 @@ export interface JobAdData {
 }
 
 export class JobAd {
+  id?: string
+  createdAt?: Date
+  updatedAt?: Date
+
   title: string
   url: string
   postedDate: Date
@@ -22,6 +26,9 @@ export class JobAd {
 
   toJSON() {
     return {
+      id: this.id,
+      createdAt: this.createdAt,
+      updatedAt: this.updatedAt,
       title: this.title,
       url: this.url,
       postedDate: this.postedDate,

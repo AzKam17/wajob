@@ -22,12 +22,7 @@ export interface ScrapeSessionData {
 }
 
 export class ScrapeSession {
-  id?: string
-  createdAt?: Date
-  updatedAt?: Date
-
-  sessionId!: string
-  sourceId?: string
+  id: string
   sourceName: string
   mode: ScrapeMode
   status: ScrapeStatus
@@ -38,7 +33,7 @@ export class ScrapeSession {
   errors: string[]
 
   constructor(data: ScrapeSessionData) {
-    this.sessionId = this.generateSessionId()
+    this.id = this.generateId()
     this.sourceName = data.sourceName
     this.mode = data.mode
     this.status = data.status
@@ -49,11 +44,11 @@ export class ScrapeSession {
     this.errors = data.errors || []
 
     console.log(
-      `ScrapeSession created: ${this.sourceName} [${this.mode}] - ${this.sessionId}`
+      `ScrapeSession created: ${this.sourceName} [${this.mode}] - ${this.id}`
     )
   }
 
-  private generateSessionId(): string {
+  private generateId(): string {
     return `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
   }
 
@@ -86,10 +81,6 @@ export class ScrapeSession {
   toJSON() {
     return {
       id: this.id,
-      createdAt: this.createdAt,
-      updatedAt: this.updatedAt,
-      sessionId: this.sessionId,
-      sourceId: this.sourceId,
       sourceName: this.sourceName,
       mode: this.mode,
       status: this.status,

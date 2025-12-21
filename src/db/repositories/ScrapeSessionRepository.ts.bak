@@ -1,8 +1,6 @@
 import { AppDataSource } from '../data-source'
 import { ScrapeSessionEntity } from '../entities/ScrapeSessionEntity'
 import { BaseRepository } from './BaseRepository'
-import { ScrapeSessionMapper } from '../mappers'
-import { ScrapeSession } from '@models/ScrapeSession'
 
 export class ScrapeSessionRepository extends BaseRepository<ScrapeSessionEntity> {
   constructor() {
@@ -61,32 +59,5 @@ export class ScrapeSessionRepository extends BaseRepository<ScrapeSessionEntity>
       completedAt: new Date(),
       errors: currentErrors,
     })
-  }
-
-  // Model-based methods
-  async saveModel(model: ScrapeSession): Promise<ScrapeSession> {
-    const entity = await this.create(ScrapeSessionMapper.toEntity(model))
-    return ScrapeSessionMapper.toModel(entity)
-  }
-
-  async updateModel(model: ScrapeSession): Promise<ScrapeSession | null> {
-    if (!model.id) return null
-    const entity = await this.update(model.id, ScrapeSessionMapper.toEntity(model))
-    return entity ? ScrapeSessionMapper.toModel(entity) : null
-  }
-
-  async findModelBySessionId(sessionId: string): Promise<ScrapeSession | null> {
-    const entity = await this.findBySessionId(sessionId)
-    return entity ? ScrapeSessionMapper.toModel(entity) : null
-  }
-
-  async findModelsBySource(sourceName: string): Promise<ScrapeSession[]> {
-    const entities = await this.findBySource(sourceName)
-    return ScrapeSessionMapper.toModels(entities)
-  }
-
-  async findRecentModels(limit: number = 10): Promise<ScrapeSession[]> {
-    const entities = await this.findRecent(limit)
-    return ScrapeSessionMapper.toModels(entities)
   }
 }
