@@ -1,48 +1,38 @@
+import { AppDataSource } from '../data-source'
+import { ScrapeSessionEntity } from '../entities/ScrapeSessionEntity'
 import { BaseRepository } from './BaseRepository'
-import {
-  scrapeSessions,
-  type ScrapeSession,
-  type NewScrapeSession,
-} from '../schema/scrapeSessions'
-import { eq, and, desc } from 'drizzle-orm'
-import { db } from '../index'
 
-export class ScrapeSessionRepository extends BaseRepository<
-  ScrapeSession,
-  NewScrapeSession
-> {
+export class ScrapeSessionRepository extends BaseRepository<ScrapeSessionEntity> {
   constructor() {
-    super(scrapeSessions)
+    super(AppDataSource.getRepository(ScrapeSessionEntity))
   }
 
-  async findBySessionId(sessionId: string): Promise<ScrapeSession | null> {
-    return this.findOneBy(eq(scrapeSessions.sessionId, sessionId))
+  async findBySessionId(sessionId: string): Promise<ScrapeSessionEntity | null> {
+    return this.findOneBy({ sessionId })
   }
 
-  async findBySource(sourceName: string): Promise<ScrapeSession[]> {
-    return this.findBy(eq(scrapeSessions.sourceName, sourceName))
+  async findBySource(sourceName: string): Promise<ScrapeSessionEntity[]> {
+    return this.findBy({ sourceName })
   }
 
-  async findByStatus(status: string): Promise<ScrapeSession[]> {
-    return this.findBy(eq(scrapeSessions.status, status))
+  async findByStatus(
+    status: 'pending' | 'in_progress' | 'completed' | 'failed'
+  ): Promise<ScrapeSessionEntity[]> {
+    return this.findBy({ status })
   }
 
-  async findRecent(limit: number = 10): Promise<ScrapeSession[]> {
-    const result = await db
-      .select()
-      .from(scrapeSessions)
-      .where(eq(scrapeSessions.deletedAt, null))
-      .orderBy(desc(scrapeSessions.startedAt))
-      .limit(limit)
-
-    return result as ScrapeSession[]
+  async findRecent(limit: number = 10): Promise<ScrapeSessionEntity[]> {
+    return this.repository.find({
+      order: { startedAt: 'DESC' },
+      take: limit,
+    })
   }
 
   async markCompleted(
     sessionId: string,
     pagesScraped: number,
     jobsFound: number
-  ): Promise<ScrapeSession | null> {
+  ): Promise<ScrapeSessionEntity | null> {
     const session = await this.findBySessionId(sessionId)
     if (!session) return null
 
@@ -54,17 +44,20 @@ export class ScrapeSessionRepository extends BaseRepository<
     })
   }
 
-  async markFailed(sessionId: string, error: string): Promise<ScrapeSession | null> {
+  async markFailed(
+    sessionId: string,
+    error: string
+  ): Promise<ScrapeSessionEntity | null> {
     const session = await this.findBySessionId(sessionId)
     if (!session) return null
 
-    const currentErrors = session.errors ? JSON.parse(session.errors) : []
+    const currentErrors = session.errors || []
     currentErrors.push(error)
 
     return this.update(session.id, {
       status: 'failed',
       completedAt: new Date(),
-      errors: JSON.stringify(currentErrors),
+      errors: currentErrors,
     })
   }
 }
