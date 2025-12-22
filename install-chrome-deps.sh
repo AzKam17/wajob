@@ -9,6 +9,24 @@ apt-get update
 
 # Install required dependencies
 apt-get install -y \
+    libatk1.0-0t64 \
+    libatk-bridge2.0-0t64 \
+    libcups2t64 \
+    libgtk-3-0t64 \
+    libx11-xcb1 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxrandr2 \
+    libasound2t64 \
+    libpangocairo-1.0-0 \
+    libpango-1.0-0 \
+    libatspi2.0-0t64 \
+    libnss3 \
+    libdrm2 \
+    libgbm1 \
+    libxss1 \
+    fonts-liberation \
+    xdg-utils \
     ca-certificates \
     fonts-liberation \
     libasound2t64 \
