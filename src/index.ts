@@ -29,12 +29,25 @@ const app = new Elysia()
       process.env.REDIS_PASSWORD
     )
 
+    // Run initial scrape check on startup
+    const scraperSourceRepo = new ScraperSourceRepository()
+    const scheduler = new ScrapeSchedulerService(
+      scraperSourceRepo,
+      process.env.REDIS_HOST || 'localhost',
+      parseInt(process.env.REDIS_PORT || '6379'),
+      process.env.REDIS_PASSWORD,
+      parseInt(process.env.DEFAULT_SCRAPE_INTERVAL_MINUTES || '30'),
+      parseInt(process.env.MAX_PAGES_PER_SCRAPE || '3')
+    )
+    await scheduler.checkAndEnqueueScrapingTasks()
+    Logger.success('Initial scrape check completed')
+
     Logger.success('Application started successfully')
   })
   .use(
     cron({
       name: 'scrape-checker',
-      pattern: '*/5 * * * *', // Every 5 minutes
+      pattern: '*/20 * * * *', // Every 20 minutes
       async run() {
         const scraperSourceRepo = new ScraperSourceRepository()
 
