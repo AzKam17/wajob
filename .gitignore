@@ -48,3 +48,7 @@ data/
 
 # Backup files
 *.bak
+
+# PM2 logs
+logs/
+*.log
