@@ -15,6 +15,9 @@ const testCases = [
   'Comptable(H/F)',
   'ASSISTANT DE DIRECTION',
   'responsable-ressources-humaines',
+  'de la Communication', // Test: starts with lowercase word
+  'le Directeur', // Test: starts with lowercase word
+  'ET Responsable Commercial', // Test: starts with lowercase word
 ]
 
 console.log('Title Transformation Tests:\n')
