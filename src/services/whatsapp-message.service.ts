@@ -46,6 +46,7 @@ export class WhatsAppMessageService {
 
             const messageText = message.text.body.trim()
             const isIceBreaker = ICE_BREAKER_MESSAGES.includes(messageText)
+            const isSeeMore = messageText.toLowerCase() === 'voir plus'
 
             // Check if this is the first message from this user
             const existingUser = await this.botUserRepo.findByPhoneNumber(from)
@@ -129,26 +130,81 @@ export class WhatsAppMessageService {
                 lastMessageAt: new Date(),
               })
 
-              const userMessage = message.text.body
-              Logger.info('Processing job search', { from, query: userMessage })
+              let userQuery: string
+              let offset: number = 0
 
-              // Search for jobs (max 5 results)
-              const jobs = await this.jobSearch.searchJobs(userMessage, from)
+              if (isSeeMore) {
+                // User wants to see more results - use stored query and increment offset
+                const lastQuery = existingUser.preferences?.lastQuery as string
+                const lastOffset = (existingUser.preferences?.lastOffset as number) || 0
+
+                if (!lastQuery) {
+                  // No previous query stored - ask them to search first
+                  await this.botMessages.sendTextMessage(
+                    from,
+                    "Veuillez d'abord effectuer une recherche en m'indiquant le poste que vous recherchez! 💼"
+                  )
+                  await this.botMessages.markAsRead(messageId)
+                  continue
+                }
+
+                userQuery = lastQuery
+                offset = lastOffset + 3 // Next page
+                Logger.info('Loading more results', { from, query: userQuery, offset })
+              } else {
+                // New search query
+                userQuery = message.text.body
+                offset = 0
+                Logger.info('Processing new job search', { from, query: userQuery })
+              }
+
+              // Search for jobs (max 3 results)
+              const jobs = await this.jobSearch.searchJobs(userQuery, from, offset)
 
               if (jobs.length > 0) {
                 // Found exact matches - send them
                 await this.botMessages.sendMultipleJobOffers(from, jobs)
-              } else {
-                // No exact matches - try similar jobs
-                const similarJobs = await this.jobSearch.searchSimilarJobs(userMessage, from)
 
-                if (similarJobs.length > 0) {
-                  // Found similar jobs - send intro message first
-                  await this.botMessages.sendNoExactMatchMessage(from)
-                  await this.botMessages.sendMultipleJobOffers(from, similarJobs)
+                // Send "see more" prompt after results
+                await this.botMessages.sendSeeMorePrompt(from)
+
+                // Store query and offset for pagination
+                await this.botUserRepo.update(existingUser.id, {
+                  preferences: {
+                    ...existingUser.preferences,
+                    lastQuery: userQuery,
+                    lastOffset: offset,
+                  }
+                })
+              } else {
+                if (offset > 0) {
+                  // No more results available
+                  await this.botMessages.sendTextMessage(
+                    from,
+                    "Il n'y a plus d'offres disponibles pour cette recherche. 😔\n\nVous pouvez effectuer une nouvelle recherche! 🔍"
+                  )
                 } else {
-                  // No jobs at all
-                  await this.botMessages.sendNoJobsFoundMessage(from, userMessage)
+                  // No exact matches on first page - try similar jobs
+                  const similarJobs = await this.jobSearch.searchSimilarJobs(userQuery, from, 0)
+
+                  if (similarJobs.length > 0) {
+                    // Found similar jobs - send intro message first
+                    await this.botMessages.sendNoExactMatchMessage(from)
+                    await this.botMessages.sendMultipleJobOffers(from, similarJobs)
+                    await this.botMessages.sendSeeMorePrompt(from)
+
+                    // Store query for pagination
+                    await this.botUserRepo.update(existingUser.id, {
+                      preferences: {
+                        ...existingUser.preferences,
+                        lastQuery: userQuery,
+                        lastOffset: 0,
+                      }
+                    })
+                  } else {
+                    // No jobs at all
+                    await this.botMessages.sendNoJobsFoundMessage(from, userQuery)
+                  }
                 }
               }
 

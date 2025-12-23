@@ -309,6 +309,25 @@ Par exemple: "Développeur", "Comptable", "Marketing Manager", etc. 💼`
   }
 
   /**
+   * Send "see more" prompt after showing initial job results
+   * @param phoneNumber - Recipient's phone number
+   */
+  async sendSeeMorePrompt(phoneNumber: string): Promise<void> {
+    try {
+      const message = `Souhaitez-vous voir plus d'offres? 🔍
+
+Envoyez *Voir plus* pour afficher d'autres opportunités! 📋`
+
+      await this.sendTextMessage(phoneNumber, message)
+
+      Logger.success('See more prompt sent', { phoneNumber })
+    } catch (error) {
+      Logger.error('Error sending see more prompt', { error, phoneNumber })
+      throw error
+    }
+  }
+
+  /**
    * Utility: Delay execution
    * @param ms - Milliseconds to delay
    */

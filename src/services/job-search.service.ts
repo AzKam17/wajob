@@ -12,26 +12,27 @@ export interface JobSearchResult {
 
 /**
  * Job Search Service using PostgreSQL full-text search
- * Always returns max 5 results
+ * Always returns max 3 results per page
  */
 export class JobSearchService {
   private jobRepo = new JobAdRepository()
   private linkRepo = new PersonalizedLinkRepository()
-  private readonly MAX_RESULTS = 5
+  private readonly MAX_RESULTS = 3
 
   /**
    * Search for jobs using PostgreSQL full-text search
    * @param query - Search query from user
    * @param phoneNumber - User's phone number for personalized links
-   * @returns Array of max 5 job results with personalized links
+   * @param offset - Pagination offset (default: 0)
+   * @returns Array of max 3 job results with personalized links
    */
-  async searchJobs(query: string, phoneNumber: string): Promise<JobSearchResult[]> {
+  async searchJobs(query: string, phoneNumber: string, offset: number = 0): Promise<JobSearchResult[]> {
     try {
-      Logger.info('Searching for jobs', { query, phoneNumber })
+      Logger.info('Searching for jobs', { query, phoneNumber, offset })
 
       // Use PostgreSQL full-text search on title field
       // This uses the ILIKE operator for case-insensitive pattern matching
-      const jobs = await this.jobRepo.searchByQuery(query, this.MAX_RESULTS)
+      const jobs = await this.jobRepo.searchByQuery(query, this.MAX_RESULTS, offset)
 
       if (jobs.length === 0) {
         Logger.info('No jobs found', { query })
@@ -77,15 +78,15 @@ export class JobSearchService {
    * Search for similar jobs when exact match not found
    * Uses broader search criteria
    */
-  async searchSimilarJobs(query: string, phoneNumber: string): Promise<JobSearchResult[]> {
+  async searchSimilarJobs(query: string, phoneNumber: string, offset: number = 0): Promise<JobSearchResult[]> {
     try {
-      Logger.info('Searching for similar jobs', { query, phoneNumber })
+      Logger.info('Searching for similar jobs', { query, phoneNumber, offset })
 
       // Extract keywords from query (simple split for now)
       const keywords = query.toLowerCase().split(/\s+/)
       const mainKeyword = keywords[0] // Use first word as main keyword
 
-      const jobs = await this.jobRepo.searchByQuery(mainKeyword, this.MAX_RESULTS)
+      const jobs = await this.jobRepo.searchByQuery(mainKeyword, this.MAX_RESULTS, offset)
 
       if (jobs.length === 0) {
         return []

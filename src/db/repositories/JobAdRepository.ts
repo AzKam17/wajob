@@ -53,14 +53,16 @@ export class JobAdRepository extends BaseRepository<JobAdEntity> {
    * Search jobs using PostgreSQL full-text search
    * Uses ILIKE for case-insensitive pattern matching
    * @param query - Search query
-   * @param limit - Maximum number of results (default: 5)
+   * @param limit - Maximum number of results (default: 3)
+   * @param offset - Pagination offset (default: 0)
    */
-  async searchByQuery(query: string, limit: number = 5): Promise<JobAd[]> {
+  async searchByQuery(query: string, limit: number = 3, offset: number = 0): Promise<JobAd[]> {
     const entities = await this.repository
       .createQueryBuilder('job')
       .where('job.title ILIKE :query', { query: `%${query}%` })
       .orWhere('job.description ILIKE :query', { query: `%${query}%` })
       .orderBy('job.postedDate', 'DESC')
+      .skip(offset)
       .take(limit)
       .getMany()
 
