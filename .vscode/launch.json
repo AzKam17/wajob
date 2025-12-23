@@ -4,22 +4,50 @@
     {
       "type": "bun",
       "request": "launch",
-      "name": "Debug Bun",
+      "name": "Debug Server (Watch)",
       "program": "${workspaceFolder}/src/index.ts",
       "args": [],
       "cwd": "${workspaceFolder}",
       "stopOnEntry": false,
-      "watchMode": true
+      "watchMode": true,
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen"
     },
     {
       "type": "bun",
       "request": "launch",
-      "name": "Run Bun",
+      "name": "Debug Server",
       "program": "${workspaceFolder}/src/index.ts",
       "args": [],
       "cwd": "${workspaceFolder}",
       "stopOnEntry": false,
-      "watchMode": false
+      "watchMode": false,
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen"
+    },
+    {
+      "type": "bun",
+      "request": "launch",
+      "name": "Debug Worker (Watch)",
+      "program": "${workspaceFolder}/src/workers/standalone-worker.ts",
+      "args": [],
+      "cwd": "${workspaceFolder}",
+      "stopOnEntry": false,
+      "watchMode": true,
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen"
+    },
+    {
+      "type": "bun",
+      "request": "launch",
+      "name": "Debug Worker",
+      "program": "${workspaceFolder}/src/workers/standalone-worker.ts",
+      "args": [],
+      "cwd": "${workspaceFolder}",
+      "stopOnEntry": false,
+      "watchMode": false,
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen"
     },
     {
       "type": "bun",
@@ -28,7 +56,8 @@
       "program": "${file}",
       "args": [],
       "cwd": "${workspaceFolder}",
-      "stopOnEntry": false
+      "stopOnEntry": false,
+      "console": "integratedTerminal"
     }
   ]
 }
