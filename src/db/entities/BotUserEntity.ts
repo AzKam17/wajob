@@ -6,7 +6,7 @@ export class BotUserEntity extends BaseEntity {
   @Column({ unique: true })
   phoneNumber!: string
 
-  @Column('datetime', { nullable: true })
+  @Column('timestamp', { nullable: true })
   lastMessageAt?: Date
 
   @Column('simple-json')

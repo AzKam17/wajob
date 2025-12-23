@@ -23,10 +23,10 @@ export class ScrapeSessionEntity extends BaseEntity {
   @Column()
   status!: 'completed' | 'failed'
 
-  @Column('datetime')
+  @Column('timestamp')
   startedAt!: Date
 
-  @Column('datetime', { nullable: true })
+  @Column('timestamp', { nullable: true })
   completedAt?: Date
 
   @Column({ default: 0 })

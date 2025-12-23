@@ -9,7 +9,7 @@ export class ScraperSourceEntity extends BaseEntity {
   @Column()
   url!: string
 
-  @Column('datetime', { nullable: true })
+  @Column('timestamp', { nullable: true })
   lastScrapedAt?: Date
 
   @Column({ nullable: true })
