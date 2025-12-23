@@ -32,14 +32,20 @@ export class WhatsAppMessageService {
               type: message.type
             })
 
-            // Check if this is an interactive message (ice breaker click)
-            const isIceBreaker = message.type === 'interactive'
-
-            // Skip non-text and non-interactive messages
-            if (message.type !== 'text' && !isIceBreaker) {
-              Logger.debug('Skipping message', { type: message.type })
+            // Skip non-text messages
+            if (message.type !== 'text') {
+              Logger.debug('Skipping non-text message', { type: message.type })
               continue
             }
+
+            // Ice breaker messages (configured in setup-ice-breakers.ts)
+            const ICE_BREAKER_MESSAGES = [
+              'Je cherche un emploi.',
+              'Hello, montre moi ce que tu sais faire.'
+            ]
+
+            const messageText = message.text.body.trim()
+            const isIceBreaker = ICE_BREAKER_MESSAGES.includes(messageText)
 
             // Check if this is the first message from this user
             const existingUser = await this.botUserRepo.findByPhoneNumber(from)
