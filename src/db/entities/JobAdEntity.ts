@@ -18,7 +18,7 @@ export class JobAdEntity extends BaseEntity {
   @Column({ unique: true })
   url!: string
 
-  @Column('datetime')
+  @Column('timestamp')
   postedDate!: Date
 
   @Column()
