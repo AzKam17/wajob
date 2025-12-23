@@ -6,11 +6,19 @@ import { ScraperSourceRepository } from './db/repositories/ScraperSourceReposito
 import { PersonalizedLinkRepository } from './db/repositories/PersonalizedLinkRepository'
 import { BotUserRepository } from './db/repositories/BotUserRepository'
 import { WhatsAppMessageService } from './services/whatsapp-message.service'
+import { getWhatsAppMessageQueue, closeWhatsAppMessageQueue } from './queues/whatsapp-message.queue'
 import { Logger } from './utils/logger'
 
 // Initialize database
 await initializeDatabase()
 Logger.success('Database initialized')
+
+// Initialize WhatsApp message queue
+const whatsappQueue = getWhatsAppMessageQueue(
+  process.env.REDIS_HOST || 'localhost',
+  parseInt(process.env.REDIS_PORT || '6379'),
+  process.env.REDIS_PASSWORD
+)
 
 const app = new Elysia()
   .use(env(envSchema))
@@ -88,7 +96,7 @@ const app = new Elysia()
     set.status = 201
     return {
       link,
-      url: `${process.env.BASE_URL || 'http://localhost:3000'}/${link.id}`
+      url: `${process.env.APP_URL || 'http://localhost:3000'}/${link.id}`
     }
   })
   .get('/webhook/whatsapp', async ({ query, set }) => {
@@ -114,16 +122,20 @@ const app = new Elysia()
   })
   .post('/webhook/whatsapp', async ({ body, set }) => {
     try {
-      const whatsappService = new WhatsAppMessageService()
+      Logger.info('Received WhatsApp webhook - enqueueing message', { body })
 
-      Logger.info('Received WhatsApp webhook', { body })
+      // Enqueue the message for processing instead of processing synchronously
+      await whatsappQueue.add('process-message', {
+        payload: body,
+        receivedAt: new Date().toISOString(),
+      })
 
-      await whatsappService.handleIncomingMessage(body as any)
+      Logger.success('WhatsApp message enqueued successfully')
 
       set.status = 200
       return { success: true }
     } catch (error) {
-      Logger.error('Error processing WhatsApp webhook', { error })
+      Logger.error('Error enqueueing WhatsApp message', { error })
       set.status = 500
       return { error: 'Internal server error' }
     }
@@ -164,6 +176,7 @@ const app = new Elysia()
 
 const shutdown = async (signal: string) => {
   Logger.info(`${signal} received, shutting down gracefully`)
+  await closeWhatsAppMessageQueue()
   process.exit(0)
 }
 

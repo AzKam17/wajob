@@ -44,6 +44,11 @@ export class ScraperSourceRepository extends BaseRepository<ScraperSourceEntity>
     return ScraperSourceMapper.toModel(entity)
   }
 
+  async upsertModel(model: ScraperSource): Promise<ScraperSource> {
+    const entity = await this.upsert(ScraperSourceMapper.toEntity(model), ['name'])
+    return ScraperSourceMapper.toModel(entity)
+  }
+
   async updateModel(model: ScraperSource): Promise<ScraperSource | null> {
     if (!model.id) return null
     const entity = await this.update(model.id, ScraperSourceMapper.toEntity(model))

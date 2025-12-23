@@ -14,6 +14,15 @@ export abstract class BaseRepository<T extends BaseEntity> {
     return await this.repository.save(entity)
   }
 
+  async upsert(
+    data: DeepPartial<T>,
+    conflictPaths: string[]
+  ): Promise<T> {
+    const result = await this.repository.upsert(data, conflictPaths)
+    const id = result.identifiers[0]?.id
+    return (await this.findById(id))!
+  }
+
   async findById(id: string): Promise<T | null> {
     return await this.repository.findOne({
       where: { id } as FindOptionsWhere<T>,

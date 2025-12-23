@@ -3,6 +3,7 @@ import { t } from 'elysia'
 export const envSchema = {
   // Server
   PORT: t.Optional(t.String({ default: '3000' })),
+  APP_URL: t.Optional(t.String({ default: 'http://localhost:3000' })),
 
   // Database (PostgreSQL)
   DB_HOST: t.Optional(t.String({ default: 'localhost' })),

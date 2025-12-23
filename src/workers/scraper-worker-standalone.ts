@@ -1,9 +1,7 @@
 import { initializeDatabase } from '../db'
 import { startScrapeWorker } from './scrape.worker'
-import { startWhatsAppMessageWorker } from './whatsapp-message.worker'
 import { closeRedisConnection } from '@config/redis'
 import { closeScrapeQueue } from '../queues/scrape.queue'
-import { closeWhatsAppMessageQueue } from '../queues/whatsapp-message.queue'
 import { ScraperSourceRepository } from '../db/repositories/ScraperSourceRepository'
 import { ScrapeSchedulerService } from '../services/scrape-scheduler.service'
 import { Logger } from '../utils/logger'
@@ -12,14 +10,8 @@ import { Logger } from '../utils/logger'
 await initializeDatabase()
 Logger.success('Database initialized')
 
-// Start BullMQ workers
+// Start scrape worker
 const scrapeWorker = startScrapeWorker(
-  process.env.REDIS_HOST || 'localhost',
-  parseInt(process.env.REDIS_PORT || '6379'),
-  process.env.REDIS_PASSWORD
-)
-
-const whatsappWorker = startWhatsAppMessageWorker(
   process.env.REDIS_HOST || 'localhost',
   parseInt(process.env.REDIS_PORT || '6379'),
   process.env.REDIS_PASSWORD
@@ -44,15 +36,13 @@ const checkInterval = setInterval(async () => {
   await scheduler.checkAndEnqueueScrapingTasks()
 }, 20 * 60 * 1000) // 20 minutes in milliseconds
 
-Logger.success('Standalone worker started with periodic scrape checks')
+Logger.success('Scraper worker started with periodic scrape checks')
 
 const shutdown = async (signal: string) => {
-  Logger.info(`${signal} received, shutting down workers gracefully`)
+  Logger.info(`${signal} received, shutting down scraper worker gracefully`)
   clearInterval(checkInterval)
   await scrapeWorker.close()
-  await whatsappWorker.close()
   await closeScrapeQueue()
-  await closeWhatsAppMessageQueue()
   await closeRedisConnection()
   process.exit(0)
 }

@@ -4,9 +4,13 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "bun run --watch src/index.ts",
-    "worker": "bun run --watch src/workers/standalone-worker.ts",
+    "dev:whatsapp-worker": "bun run --watch src/workers/whatsapp-worker-standalone.ts",
+    "dev:scraper-worker": "bun run --watch src/workers/scraper-worker-standalone.ts",
+    "dev:all-workers": "bun run --watch src/workers/standalone-worker.ts",
     "prod": "bun run src/index.ts",
-    "prod:worker": "bun run src/workers/standalone-worker.ts",
+    "prod:whatsapp-worker": "bun run src/workers/whatsapp-worker-standalone.ts",
+    "prod:scraper-worker": "bun run src/workers/scraper-worker-standalone.ts",
+    "prod:all-workers": "bun run src/workers/standalone-worker.ts",
     "seed": "bun run scripts/seed-scraper-sources.ts",
     "setup:ice-breakers": "bun run scripts/setup-ice-breakers.ts"
   },

@@ -21,12 +21,6 @@ export class WhatsAppMessageService {
           }
 
           for (const message of messages) {
-            // Skip non-text messages for now
-            if (message.type !== 'text') {
-              Logger.debug('Skipping non-text message', { type: message.type })
-              continue
-            }
-
             const from = message.from
             const messageId = message.id
             const contactName = contacts?.[0]?.profile?.name || 'User'
@@ -35,19 +29,50 @@ export class WhatsAppMessageService {
               from,
               messageId,
               contactName,
+              type: message.type
             })
+
+            // Check if this is an interactive message (ice breaker click)
+            const isIceBreaker = message.type === 'interactive'
+
+            // Skip non-text and non-interactive messages
+            if (message.type !== 'text' && !isIceBreaker) {
+              Logger.debug('Skipping message', { type: message.type })
+              continue
+            }
 
             // Check if this is the first message from this user
             const existingUser = await this.botUserRepo.findByPhoneNumber(from)
 
-            if (!existingUser) {
-              // First message - create user and send welcome flow
-              Logger.info('First message from user, creating user record', { from })
+            // Check if last message is older than 10 minutes
+            const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000)
+            const isNewConversation = !existingUser ||
+              !existingUser.lastMessageAt ||
+              new Date(existingUser.lastMessageAt) < tenMinutesAgo
 
-              await this.botUserRepo.create({
-                phoneNumber: from,
-                preferences: {},
+            // Send welcome message if:
+            // 1. First time user (no existing user)
+            // 2. Ice breaker clicked
+            // 3. Last message is older than 10 minutes
+            if (!existingUser || isIceBreaker || isNewConversation) {
+              Logger.info('Sending welcome flow', {
+                from,
+                reason: !existingUser ? 'new_user' : isIceBreaker ? 'ice_breaker' : 'stale_conversation'
               })
+
+              // Create user if doesn't exist
+              if (!existingUser) {
+                await this.botUserRepo.create({
+                  phoneNumber: from,
+                  preferences: {},
+                  lastMessageAt: new Date(),
+                })
+              } else {
+                // Update last message time
+                await this.botUserRepo.update(existingUser.id, {
+                  lastMessageAt: new Date(),
+                })
+              }
 
               // Send typing indicator
               await this.botMessages.sendTypingIndicator(messageId)
@@ -60,11 +85,16 @@ export class WhatsAppMessageService {
 
               Logger.success('Welcome flow sent successfully', { to: from })
             } else {
-              // Existing user - process job search
+              // Existing user with recent conversation - process job search
               Logger.info('Message from existing user', {
                 from,
                 userId: existingUser.id,
                 messageText: message.text.body
+              })
+
+              // Update last message time
+              await this.botUserRepo.update(existingUser.id, {
+                lastMessageAt: new Date(),
               })
 
               const userMessage = message.text.body

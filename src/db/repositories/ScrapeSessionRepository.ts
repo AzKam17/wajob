@@ -69,6 +69,11 @@ export class ScrapeSessionRepository extends BaseRepository<ScrapeSessionEntity>
     return ScrapeSessionMapper.toModel(entity)
   }
 
+  async upsertModel(model: ScrapeSession): Promise<ScrapeSession> {
+    const entity = await this.upsert(ScrapeSessionMapper.toEntity(model), ['sessionId'])
+    return ScrapeSessionMapper.toModel(entity)
+  }
+
   async updateModel(model: ScrapeSession): Promise<ScrapeSession | null> {
     if (!model.id) return null
     const entity = await this.update(model.id, ScrapeSessionMapper.toEntity(model))

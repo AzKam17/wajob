@@ -107,7 +107,7 @@ Mais voici quelques opportunités similaires qui pourraient vous intéresser �
       // {{2}} - Company
       // {{3}} - Location
       // Button parameter:
-      // {{1}} - Link ID (appended to https://jobs.belou.store/)
+      // {{1}} - Link ID (appended to APP_URL from WhatsApp template config)
 
       await this.whatsapp.sendTemplateMessage(
         phoneNumber,
@@ -115,7 +115,7 @@ Mais voici quelques opportunités similaires qui pourraient vous intéresser �
         'fr',
         [
           {
-            type: 'body',
+            type: 'BODY' as any,
             parameters: [
               {
                 type: 'text',
@@ -132,15 +132,17 @@ Mais voici quelques opportunités similaires qui pourraient vous intéresser �
             ]
           },
           {
-            type: 'buttons',
+            type: 'BUTTON' as any,
+            sub_type: 'url',
+            index: 0,
             parameters: [
               {
                 type: 'text',
-                text: linkId // This will be appended to https://jobs.belou.store/
+                text: linkId // This will be appended to the base URL configured in WhatsApp template
               }
             ]
           }
-        ],
+        ] as any,
         { recipientType: 'individual' }
       )
 
