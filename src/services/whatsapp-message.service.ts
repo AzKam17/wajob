@@ -184,7 +184,8 @@ export class WhatsAppMessageService {
                 })
               } else {
                 if (offset > 0) {
-                  // No more results available
+                  // No more results available - show typing then message
+                  await this.botMessages.showTyping(from, 800)
                   await this.botMessages.sendTextMessage(
                     from,
                     "Il n'y a plus d'offres disponibles pour cette recherche. 😔\n\nVous pouvez effectuer une nouvelle recherche! 🔍"
@@ -215,7 +216,8 @@ export class WhatsAppMessageService {
                       }
                     })
                   } else {
-                    // No jobs at all
+                    // No jobs at all - show typing then message
+                    await this.botMessages.showTyping(from, 800)
                     await this.botMessages.sendNoJobsFoundMessage(from, userQuery)
                   }
                 }
