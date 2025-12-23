@@ -21,4 +21,5 @@ export const envSchema = {
   WHATSAPP_BUSINESS_ACCOUNT_ID: t.String(),
   WHATSAPP_VERSION: t.Optional(t.String({ default: 'v23.0' })),
   WHATSAPP_WEBHOOK_VERIFY_TOKEN: t.Optional(t.String({ default: 'your-verify-token-here' })),
+  WHATSAPP_WEBHOOK_URL: t.Optional(t.String()),
 }

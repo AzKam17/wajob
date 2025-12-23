@@ -7,7 +7,8 @@
     "worker": "bun run --watch src/workers/standalone-worker.ts",
     "prod": "bun run src/index.ts",
     "prod:worker": "bun run src/workers/standalone-worker.ts",
-    "seed": "bun run scripts/seed-scraper-sources.ts"
+    "seed": "bun run scripts/seed-scraper-sources.ts",
+    "setup:ice-breakers": "bun run scripts/setup-ice-breakers.ts"
   },
   "dependencies": {
     "@elysiajs/cron": "^1.4.1",
