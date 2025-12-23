@@ -1,15 +1,11 @@
 import { Elysia } from 'elysia'
-import { cron } from '@elysiajs/cron'
 import { env } from '@yolk-oss/elysia-env'
 import { envSchema } from '@config/env.schema'
 import { initializeDatabase } from './db'
 import { ScraperSourceRepository } from './db/repositories/ScraperSourceRepository'
 import { PersonalizedLinkRepository } from './db/repositories/PersonalizedLinkRepository'
 import { BotUserRepository } from './db/repositories/BotUserRepository'
-import { ScrapeSchedulerService } from './services/scrape-scheduler.service'
-import { startScrapeWorker, stopScrapeWorker } from './workers/scrape.worker'
-import { closeRedisConnection } from '@config/redis'
-import { closeScrapeQueue } from './queues/scrape.queue'
+import { WhatsAppMessageService } from './services/whatsapp-message.service'
 import { Logger } from './utils/logger'
 
 // Initialize database
@@ -21,49 +17,8 @@ const app = new Elysia()
   .decorate('scraperSourceRepo', new ScraperSourceRepository())
   .onStart(async () => {
     Logger.info('Starting application')
-
-    // Start BullMQ worker
-    startScrapeWorker(
-      process.env.REDIS_HOST || 'localhost',
-      parseInt(process.env.REDIS_PORT || '6379'),
-      process.env.REDIS_PASSWORD
-    )
-
-    // Run initial scrape check on startup
-    const scraperSourceRepo = new ScraperSourceRepository()
-    const scheduler = new ScrapeSchedulerService(
-      scraperSourceRepo,
-      process.env.REDIS_HOST || 'localhost',
-      parseInt(process.env.REDIS_PORT || '6379'),
-      process.env.REDIS_PASSWORD,
-      parseInt(process.env.DEFAULT_SCRAPE_INTERVAL_MINUTES || '30'),
-      parseInt(process.env.MAX_PAGES_PER_SCRAPE || '3')
-    )
-    await scheduler.checkAndEnqueueScrapingTasks()
-    Logger.success('Initial scrape check completed')
-
     Logger.success('Application started successfully')
   })
-  .use(
-    cron({
-      name: 'scrape-checker',
-      pattern: '*/20 * * * *', // Every 20 minutes
-      async run() {
-        const scraperSourceRepo = new ScraperSourceRepository()
-
-        const scheduler = new ScrapeSchedulerService(
-          scraperSourceRepo,
-          process.env.REDIS_HOST || 'localhost',
-          parseInt(process.env.REDIS_PORT || '6379'),
-          process.env.REDIS_PASSWORD,
-          parseInt(process.env.DEFAULT_SCRAPE_INTERVAL_MINUTES || '30'),
-          parseInt(process.env.MAX_PAGES_PER_SCRAPE || '3')
-        )
-
-        await scheduler.checkAndEnqueueScrapingTasks()
-      },
-    })
-  )
   .get('/', () => {
     return {
       status: 'running',
@@ -76,6 +31,14 @@ const app = new Elysia()
   .get('/health', () => {
     return {
       status: 'healthy',
+      timestamp: new Date().toISOString(),
+    }
+  })
+  .get('/webhook/test', () => {
+    Logger.info('Webhook test endpoint called')
+    return {
+      status: 'ok',
+      message: 'Webhook endpoint is reachable',
       timestamp: new Date().toISOString(),
     }
   })
@@ -128,6 +91,43 @@ const app = new Elysia()
       url: `${process.env.BASE_URL || 'http://localhost:3000'}/${link.id}`
     }
   })
+  .get('/webhook/whatsapp', async ({ query, set }) => {
+    const whatsappService = new WhatsAppMessageService()
+    const mode = query['hub.mode']
+    const token = query['hub.verify_token']
+    const challenge = query['hub.challenge']
+
+    if (!mode || !token) {
+      set.status = 400
+      return { error: 'Missing required query parameters' }
+    }
+
+    const verified = await whatsappService.verifyWebhook(mode, token, challenge)
+
+    if (verified) {
+      set.status = 200
+      return challenge
+    }
+
+    set.status = 403
+    return { error: 'Verification failed' }
+  })
+  .post('/webhook/whatsapp', async ({ body, set }) => {
+    try {
+      const whatsappService = new WhatsAppMessageService()
+
+      Logger.info('Received WhatsApp webhook', { body })
+
+      await whatsappService.handleIncomingMessage(body as any)
+
+      set.status = 200
+      return { success: true }
+    } catch (error) {
+      Logger.error('Error processing WhatsApp webhook', { error })
+      set.status = 500
+      return { error: 'Internal server error' }
+    }
+  })
   .get('/:id', async ({ params: { id }, request, set }) => {
     const linkRepo = new PersonalizedLinkRepository()
 
@@ -164,9 +164,6 @@ const app = new Elysia()
 
 const shutdown = async (signal: string) => {
   Logger.info(`${signal} received, shutting down gracefully`)
-  await stopScrapeWorker()
-  await closeScrapeQueue()
-  await closeRedisConnection()
   process.exit(0)
 }
 

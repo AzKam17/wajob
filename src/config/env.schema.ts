@@ -14,4 +14,11 @@ export const envSchema = {
 
   // Cron
   SCRAPE_CHECK_CRON: t.Optional(t.String({ default: '*/5 * * * *' })), // Every 5 minutes
+
+  // WhatsApp
+  WHATSAPP_ACCESS_TOKEN: t.String(),
+  WHATSAPP_PHONE_NUMBER_ID: t.String(),
+  WHATSAPP_BUSINESS_ACCOUNT_ID: t.String(),
+  WHATSAPP_VERSION: t.Optional(t.String({ default: 'v23.0' })),
+  WHATSAPP_WEBHOOK_VERIFY_TOKEN: t.Optional(t.String({ default: 'your-verify-token-here' })),
 }
