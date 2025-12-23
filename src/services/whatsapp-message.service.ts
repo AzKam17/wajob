@@ -44,17 +44,23 @@ export class WhatsAppMessageService {
             // Check if this is the first message from this user
             const existingUser = await this.botUserRepo.findByPhoneNumber(from)
 
-            // Check if last message is older than 10 minutes
-            const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000)
-            const isNewConversation = !existingUser ||
-              !existingUser.lastMessageAt ||
-              new Date(existingUser.lastMessageAt) < tenMinutesAgo
+            // Calculate time thresholds
+            const now = Date.now()
+            const twoMinutesAgo = new Date(now - 2 * 60 * 1000)
+            const tenMinutesAgo = new Date(now - 10 * 60 * 1000)
+
+            const lastMessageTime = existingUser?.lastMessageAt ? new Date(existingUser.lastMessageAt) : null
+
+            // Determine conversation state
+            const isNewUser = !existingUser
+            const isStaleConversation = lastMessageTime && lastMessageTime < tenMinutesAgo
+            const isModeratelyStale = lastMessageTime && lastMessageTime < twoMinutesAgo && lastMessageTime >= tenMinutesAgo
 
             // Send welcome message if:
             // 1. First time user (no existing user)
             // 2. Ice breaker clicked
             // 3. Last message is older than 10 minutes
-            if (!existingUser || isIceBreaker || isNewConversation) {
+            if (isNewUser || isIceBreaker || isStaleConversation) {
               Logger.info('Sending welcome flow', {
                 from,
                 reason: !existingUser ? 'new_user' : isIceBreaker ? 'ice_breaker' : 'stale_conversation'
@@ -84,8 +90,28 @@ export class WhatsAppMessageService {
               await this.botMessages.markAsRead(messageId)
 
               Logger.success('Welcome flow sent successfully', { to: from })
+            } else if (isModeratelyStale) {
+              // Last message is 2-10 minutes old - ask user to re-enter job title
+              Logger.info('Sending re-enter job title prompt', {
+                from,
+                userId: existingUser.id,
+                reason: 'moderately_stale_conversation'
+              })
+
+              // Update last message time
+              await this.botUserRepo.update(existingUser.id, {
+                lastMessageAt: new Date(),
+              })
+
+              // Send re-enter prompt
+              await this.botMessages.sendReenterJobTitlePrompt(from)
+
+              // Mark message as read
+              await this.botMessages.markAsRead(messageId)
+
+              Logger.success('Re-enter prompt sent successfully', { to: from })
             } else {
-              // Existing user with recent conversation - process job search
+              // Existing user with recent conversation (< 2 minutes) - process job search
               Logger.info('Message from existing user', {
                 from,
                 userId: existingUser.id,

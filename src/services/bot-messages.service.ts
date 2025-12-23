@@ -288,6 +288,27 @@ Vous pouvez aussi me dire simplement votre secteur d'activité et je vous montre
   }
 
   /**
+   * Send "re-enter job title" prompt for stale conversations (2-10 minutes)
+   * @param phoneNumber - Recipient's phone number
+   */
+  async sendReenterJobTitlePrompt(phoneNumber: string): Promise<void> {
+    try {
+      const message = `Bonjour! 👋
+
+Pour rechercher des offres d'emploi, veuillez me dire directement le titre du poste que vous recherchez.
+
+Par exemple: "Développeur", "Comptable", "Marketing Manager", etc. 💼`
+
+      await this.sendTextMessage(phoneNumber, message)
+
+      Logger.success('Re-enter job title prompt sent', { phoneNumber })
+    } catch (error) {
+      Logger.error('Error sending re-enter job title prompt', { error, phoneNumber })
+      throw error
+    }
+  }
+
+  /**
    * Utility: Delay execution
    * @param ms - Milliseconds to delay
    */
