@@ -6,6 +6,15 @@ export class JobAdEntity extends BaseEntity {
   @Column()
   title!: string
 
+  @Column({ nullable: true })
+  company?: string
+
+  @Column({ nullable: true })
+  location?: string
+
+  @Column({ type: 'text', nullable: true })
+  description?: string
+
   @Column({ unique: true })
   url!: string
 

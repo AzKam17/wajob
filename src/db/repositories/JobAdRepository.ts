@@ -3,6 +3,7 @@ import { JobAdEntity } from '../entities/JobAdEntity'
 import { BaseRepository } from './BaseRepository'
 import { JobAdMapper } from '../mappers'
 import { JobAd } from '@models/JobAd'
+import { TitleTransformer } from '../../utils/title-transformer'
 
 export class JobAdRepository extends BaseRepository<JobAdEntity> {
   constructor() {
@@ -26,6 +27,9 @@ export class JobAdRepository extends BaseRepository<JobAdEntity> {
 
   // Model-based methods
   async saveModel(model: JobAd): Promise<JobAd> {
+    // Transform the title before saving
+    model.title = TitleTransformer.transformWithArticles(model.title)
+
     const entity = await this.create(JobAdMapper.toEntity(model))
     return JobAdMapper.toModel(entity)
   }

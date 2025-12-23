@@ -3,6 +3,9 @@ export interface JobAdData {
   url: string
   postedDate: Date
   source: string
+  company?: string
+  location?: string
+  description?: string
 }
 
 export class JobAd {
@@ -14,12 +17,18 @@ export class JobAd {
   url: string
   postedDate: Date
   source: string
+  company?: string
+  location?: string
+  description?: string
 
   constructor(data: JobAdData) {
     this.title = data.title
     this.url = data.url
     this.postedDate = data.postedDate
     this.source = data.source
+    this.company = data.company
+    this.location = data.location
+    this.description = data.description
 
     console.log(`JobAd created: ${this.title} from ${this.source}`)
   }
@@ -30,6 +39,9 @@ export class JobAd {
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
       title: this.title,
+      company: this.company,
+      location: this.location,
+      description: this.description,
       url: this.url,
       postedDate: this.postedDate,
       source: this.source,
