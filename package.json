@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "@elysiajs/cron": "^1.4.1",
+    "@microfox/whatsapp-business": "^1.5.2",
     "@yolk-oss/elysia-env": "^3.0.0",
     "bullmq": "^5.66.2",
     "elysia": "latest",
