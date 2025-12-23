@@ -7,8 +7,12 @@ import { BotUserEntity } from './entities/BotUserEntity'
 import { PersonalizedLinkEntity } from './entities/PersonalizedLinkEntity'
 
 export const AppDataSource = new DataSource({
-  type: 'sqlite',
-  database: './data/sqlite.db',
+  type: 'postgres',
+  host: process.env.DB_HOST || 'localhost',
+  port: parseInt(process.env.DB_PORT || '5432'),
+  username: process.env.DB_USER || 'wajobs',
+  password: process.env.DB_PASSWORD || 'wajobs123',
+  database: process.env.DB_NAME || 'wajobs',
   synchronize: true, // Auto-migration enabled
   logging: false,
   entities: [JobAdEntity, ScraperSourceEntity, ScrapeSessionEntity, BotUserEntity, PersonalizedLinkEntity],

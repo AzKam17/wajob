@@ -1,11 +1,13 @@
 import { WhatsAppWebhookPayload } from '@microfox/whatsapp-business'
 import { BotUserRepository } from '../db/repositories/BotUserRepository'
 import { BotMessages } from './bot-messages.service'
+import { JobSearchService } from './job-search.service'
 import { Logger } from '../utils/logger'
 
 export class WhatsAppMessageService {
   private botMessages = new BotMessages()
   private botUserRepo = new BotUserRepository()
+  private jobSearch = new JobSearchService()
 
   async handleIncomingMessage(payload: WhatsAppWebhookPayload): Promise<void> {
     try {
@@ -58,28 +60,35 @@ export class WhatsAppMessageService {
 
               Logger.success('Welcome flow sent successfully', { to: from })
             } else {
-              // Existing user - handle conversation logic here
+              // Existing user - process job search
               Logger.info('Message from existing user', {
                 from,
                 userId: existingUser.id,
                 messageText: message.text.body
               })
 
-              // Send typing indicator
-              await this.botMessages.sendTypingIndicator(messageId)
-
-              // TODO: Process the job search query
-              // For now, just acknowledge receipt
               const userMessage = message.text.body
               Logger.info('Processing job search', { from, query: userMessage })
 
-              // Example: Search for jobs and send results
-              // const jobs = await searchJobs(userMessage)
-              // if (jobs.length > 0) {
-              //   await this.botMessages.sendMultipleJobOffers(from, jobs)
-              // } else {
-              //   await this.botMessages.sendNoJobsFoundMessage(from, userMessage)
-              // }
+              // Search for jobs (max 5 results)
+              const jobs = await this.jobSearch.searchJobs(userMessage, from)
+
+              if (jobs.length > 0) {
+                // Found exact matches - send them
+                await this.botMessages.sendMultipleJobOffers(from, jobs)
+              } else {
+                // No exact matches - try similar jobs
+                const similarJobs = await this.jobSearch.searchSimilarJobs(userMessage, from)
+
+                if (similarJobs.length > 0) {
+                  // Found similar jobs - send intro message first
+                  await this.botMessages.sendNoExactMatchMessage(from)
+                  await this.botMessages.sendMultipleJobOffers(from, similarJobs)
+                } else {
+                  // No jobs at all
+                  await this.botMessages.sendNoJobsFoundMessage(from, userMessage)
+                }
+              }
 
               // Mark message as read
               await this.botMessages.markAsRead(messageId)

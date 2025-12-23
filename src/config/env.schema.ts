@@ -3,6 +3,14 @@ import { t } from 'elysia'
 export const envSchema = {
   // Server
   PORT: t.Optional(t.String({ default: '3000' })),
+
+  // Database (PostgreSQL)
+  DB_HOST: t.Optional(t.String({ default: 'localhost' })),
+  DB_PORT: t.Optional(t.String({ default: '5432' })),
+  DB_USER: t.Optional(t.String({ default: 'wajobs' })),
+  DB_PASSWORD: t.Optional(t.String({ default: 'wajobs123' })),
+  DB_NAME: t.Optional(t.String({ default: 'wajobs' })),
+
   // Redis
   REDIS_HOST: t.Optional(t.String({ default: 'localhost' })),
   REDIS_PORT: t.Optional(t.String({ default: '6379' })),

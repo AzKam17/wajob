@@ -17,6 +17,7 @@
     "bullmq": "^5.66.2",
     "elysia": "latest",
     "ioredis": "^5.8.2",
+    "pg": "^8.16.3",
     "puppeteer": "^24.34.0",
     "reflect-metadata": "^0.2.2",
     "sqlite3": "^5.1.7",
