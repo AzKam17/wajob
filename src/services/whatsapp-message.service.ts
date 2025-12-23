@@ -165,6 +165,12 @@ export class WhatsAppMessageService {
                 // Found exact matches - send them
                 await this.botMessages.sendMultipleJobOffers(from, jobs)
 
+                // Wait before sending "see more" prompt to ensure proper message order
+                await new Promise(resolve => setTimeout(resolve, 500))
+
+                // Show typing indicator before "see more" prompt
+                await this.botMessages.showTyping(from, 800)
+
                 // Send "see more" prompt after results
                 await this.botMessages.sendSeeMorePrompt(from)
 
@@ -191,6 +197,13 @@ export class WhatsAppMessageService {
                     // Found similar jobs - send intro message first
                     await this.botMessages.sendNoExactMatchMessage(from)
                     await this.botMessages.sendMultipleJobOffers(from, similarJobs)
+
+                    // Wait before sending "see more" prompt to ensure proper message order
+                    await new Promise(resolve => setTimeout(resolve, 500))
+
+                    // Show typing indicator before "see more" prompt
+                    await this.botMessages.showTyping(from, 800)
+
                     await this.botMessages.sendSeeMorePrompt(from)
 
                     // Store query for pagination

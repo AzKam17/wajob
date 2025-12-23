@@ -154,10 +154,10 @@ Mais voici quelques opportunités similaires qui pourraient vous intéresser �
   }
 
   /**
-   * Send multiple job offers in sequence
+   * Send multiple job offers in sequence with typing indicators
    * @param phoneNumber - Recipient's phone number
    * @param jobs - Array of job objects with title, company, location, and linkId
-   * @param delayBetween - Delay in milliseconds between each job (default: 500ms)
+   * @param delayBetween - Delay in milliseconds between each job (default: 1500ms)
    */
   async sendMultipleJobOffers(
     phoneNumber: string,
@@ -167,7 +167,7 @@ Mais voici quelques opportunités similaires qui pourraient vous intéresser �
       location: string
       linkId: string
     }>,
-    delayBetween: number = 500
+    delayBetween: number = 1500
   ): Promise<void> {
     try {
       Logger.info('Sending multiple job offers', {
@@ -177,6 +177,9 @@ Mais voici quelques opportunités similaires qui pourraient vous intéresser �
 
       for (let i = 0; i < jobs.length; i++) {
         const job = jobs[i]
+
+        // Show typing indicator before each job offer
+        await this.showTyping(phoneNumber, 800)
 
         await this.sendJobOffer(
           phoneNumber,
@@ -215,6 +218,25 @@ Mais voici quelques opportunités similaires qui pourraient vous intéresser �
     } catch (error) {
       Logger.error('Error sending typing indicator', { error })
       // Don't throw - typing indicator failure shouldn't block message flow
+    }
+  }
+
+  /**
+   * Show typing indicator for a phone number
+   * @param phoneNumber - Recipient's phone number
+   * @param duration - Duration in milliseconds (default: 1000ms)
+   */
+  async showTyping(phoneNumber: string, duration: number = 1000): Promise<void> {
+    try {
+      // Send typing on status (this is a visual indicator in WhatsApp)
+      await this.whatsapp.markChatAsTyping(phoneNumber)
+
+      // Wait for the specified duration
+      await this.delay(duration)
+    } catch (error) {
+      Logger.debug('Typing indicator not supported or failed', { error })
+      // Fallback to just a delay if typing indicator fails
+      await this.delay(duration)
     }
   }
 
