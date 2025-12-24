@@ -49,7 +49,9 @@ export class WhatsAppMessageService {
             // Limit cache size to prevent memory issues
             if (this.processedMessages.size > this.MAX_PROCESSED_CACHE) {
               const firstItem = this.processedMessages.values().next().value
-              this.processedMessages.delete(firstItem)
+              if (firstItem) {
+                this.processedMessages.delete(firstItem)
+              }
             }
 
             Logger.info('Processing incoming message', {
