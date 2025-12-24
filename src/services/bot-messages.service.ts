@@ -190,7 +190,7 @@ Mais voici quelques opportunités similaires qui pourraient vous intéresser �
 
         // Add delay between messages (except after the last one)
         if (i < jobs.length - 1) {
-          await this.delay(delayBetween)
+          await Bun.sleep(delayBetween)
         }
       }
 
