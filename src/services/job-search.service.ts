@@ -48,6 +48,12 @@ export class JobSearchService {
       // Filter out duplicates by ID (defensive - shouldn't happen but just in case)
       const seenIds = new Set<string>()
       const uniqueJobs = jobs.filter(job => {
+        // Skip jobs without IDs (shouldn't happen with database results)
+        if (!job.id) {
+          Logger.warn('Job without ID detected', { title: job.title })
+          return false
+        }
+
         if (seenIds.has(job.id)) {
           Logger.warn('Duplicate job detected in database results', { jobId: job.id, title: job.title })
           return false
@@ -119,6 +125,12 @@ export class JobSearchService {
       // Filter out duplicates by ID
       const seenIds = new Set<string>()
       const uniqueJobs = jobs.filter(job => {
+        // Skip jobs without IDs (shouldn't happen with database results)
+        if (!job.id) {
+          Logger.warn('Job without ID detected in similar jobs', { title: job.title })
+          return false
+        }
+
         if (seenIds.has(job.id)) {
           Logger.warn('Duplicate job detected in similar jobs results', { jobId: job.id, title: job.title })
           return false
