@@ -158,6 +158,7 @@ Mais voici quelques opportunités similaires qui pourraient vous intéresser �
    * @param phoneNumber - Recipient's phone number
    * @param jobs - Array of job objects with title, company, location, and linkId
    * @param delayBetween - Delay in milliseconds between each job (default: 1500ms)
+   * @param messageId - Message ID for typing indicator
    */
   async sendMultipleJobOffers(
     phoneNumber: string,
@@ -167,7 +168,8 @@ Mais voici quelques opportunités similaires qui pourraient vous intéresser �
       location: string
       linkId: string
     }>,
-    delayBetween: number = 1500
+    delayBetween: number = 1500,
+    messageId?: string
   ): Promise<void> {
     try {
       Logger.info('Sending multiple job offers', {
@@ -177,9 +179,6 @@ Mais voici quelques opportunités similaires qui pourraient vous intéresser �
 
       for (let i = 0; i < jobs.length; i++) {
         const job = jobs[i]
-
-        // Show typing indicator before each job offer
-        await this.showTyping(phoneNumber, 800)
 
         await this.sendJobOffer(
           phoneNumber,
@@ -226,17 +225,16 @@ Mais voici quelques opportunités similaires qui pourraient vous intéresser �
    * @param phoneNumber - Recipient's phone number
    * @param duration - Duration in milliseconds (default: 1000ms)
    */
-  async showTyping(phoneNumber: string, duration: number = 1000): Promise<void> {
+  async showTyping(messageId: string): Promise<void> {
     try {
       // Send typing on status (this is a visual indicator in WhatsApp)
-      await this.whatsapp.markChatAsTyping(phoneNumber)
-
-      // Wait for the specified duration
-      await this.delay(duration)
+      await this.whatsapp.sendTypingIndicator({
+        messageId,
+        type: 'text'
+      })
     } catch (error) {
       Logger.debug('Typing indicator not supported or failed', { error })
       // Fallback to just a delay if typing indicator fails
-      await this.delay(duration)
     }
   }
 
@@ -347,13 +345,5 @@ Envoyez *Voir plus* pour afficher d'autres opportunités! 📋`
       Logger.error('Error sending see more prompt', { error, phoneNumber })
       throw error
     }
-  }
-
-  /**
-   * Utility: Delay execution
-   * @param ms - Milliseconds to delay
-   */
-  private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms))
   }
 }

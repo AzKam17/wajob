@@ -162,14 +162,17 @@ export class WhatsAppMessageService {
               const jobs = await this.jobSearch.searchJobs(userQuery, from, offset)
 
               if (jobs.length > 0) {
+                await this.botMessages.showTyping(messageId)
+                await Bun.sleep(800)
                 // Found exact matches - send them
-                await this.botMessages.sendMultipleJobOffers(from, jobs)
+                await this.botMessages.sendMultipleJobOffers(from, jobs, 1500, messageId)
 
                 // Wait before sending "see more" prompt to ensure proper message order
-                await new Promise(resolve => setTimeout(resolve, 500))
+                await Bun.sleep(500)
 
                 // Show typing indicator before "see more" prompt
-                await this.botMessages.showTyping(from, 800)
+                await this.botMessages.showTyping(messageId)
+                await Bun.sleep(800)
 
                 // Send "see more" prompt after results
                 await this.botMessages.sendSeeMorePrompt(from)
@@ -185,7 +188,8 @@ export class WhatsAppMessageService {
               } else {
                 if (offset > 0) {
                   // No more results available - show typing then message
-                  await this.botMessages.showTyping(from, 800)
+                  await this.botMessages.showTyping(messageId)
+                  await Bun.sleep(800)
                   await this.botMessages.sendTextMessage(
                     from,
                     "Il n'y a plus d'offres disponibles pour cette recherche. 😔\n\nVous pouvez effectuer une nouvelle recherche! 🔍"
@@ -197,14 +201,14 @@ export class WhatsAppMessageService {
                   if (similarJobs.length > 0) {
                     // Found similar jobs - send intro message first
                     await this.botMessages.sendNoExactMatchMessage(from)
-                    await this.botMessages.sendMultipleJobOffers(from, similarJobs)
+                    await this.botMessages.sendMultipleJobOffers(from, similarJobs, 1500, messageId)
 
                     // Wait before sending "see more" prompt to ensure proper message order
-                    await new Promise(resolve => setTimeout(resolve, 500))
+                    await Bun.sleep(500)
 
                     // Show typing indicator before "see more" prompt
-                    await this.botMessages.showTyping(from, 800)
-
+                    await this.botMessages.showTyping(messageId)
+                    await Bun.sleep(800)
                     await this.botMessages.sendSeeMorePrompt(from)
 
                     // Store query for pagination
@@ -217,7 +221,8 @@ export class WhatsAppMessageService {
                     })
                   } else {
                     // No jobs at all - show typing then message
-                    await this.botMessages.showTyping(from, 800)
+                    await this.botMessages.showTyping(messageId)
+                    await Bun.sleep(800)
                     await this.botMessages.sendNoJobsFoundMessage(from, userQuery)
                   }
                 }
