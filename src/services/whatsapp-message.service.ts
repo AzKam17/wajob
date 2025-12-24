@@ -67,7 +67,7 @@ export class WhatsAppMessageService {
               continue
             }
 
-            // Send typing indicator at the start of processing
+            // Send typing indicator (also marks as read automatically)
             await this.botMessages.sendTypingIndicator(messageId)
 
             // Ice breaker messages (configured in setup-ice-breakers.ts)
@@ -122,9 +122,6 @@ export class WhatsAppMessageService {
               // Send welcome flow (template + follow-up text after 2 seconds)
               await this.botMessages.sendWelcomeFlow(from)
 
-              // Mark message as read
-              await this.botMessages.markAsRead(messageId)
-
               Logger.success('Welcome flow sent successfully', { to: from })
             } else if (isModeratelyStale) {
               // Last message is 2-10 minutes old - ask user to re-enter job title
@@ -141,9 +138,6 @@ export class WhatsAppMessageService {
 
               // Send re-enter prompt
               await this.botMessages.sendReenterJobTitlePrompt(from)
-
-              // Mark message as read
-              await this.botMessages.markAsRead(messageId)
 
               Logger.success('Re-enter prompt sent successfully', { to: from })
             } else {
@@ -173,7 +167,6 @@ export class WhatsAppMessageService {
                     from,
                     "Veuillez d'abord effectuer une recherche en m'indiquant le poste que vous recherchez! 💼"
                   )
-                  await this.botMessages.markAsRead(messageId)
                   continue
                 }
 
@@ -200,10 +193,12 @@ export class WhatsAppMessageService {
 
               if (jobs.length > 0) {
                 // Found exact matches - send them
-                await this.botMessages.sendMultipleJobOffers(from, jobs, 1500, messageId)
+                await this.botMessages.sendMultipleJobOffers(from, jobs)
 
-                // Send "see more" prompt after results
-                await this.botMessages.sendSeeMorePrompt(from)
+                // Send "see more" prompt after 10 seconds
+                setTimeout(() => {
+                  this.botMessages.sendSeeMorePrompt(from)
+                }, 15_000)
 
                 // Store query and offset for pagination
                 await this.botUserRepo.update(existingUser.id, {
@@ -227,10 +222,12 @@ export class WhatsAppMessageService {
                   if (similarJobs.length > 0) {
                     // Found similar jobs - send intro message first
                     await this.botMessages.sendNoExactMatchMessage(from)
-                    await this.botMessages.sendMultipleJobOffers(from, similarJobs, 1500, messageId)
+                    await this.botMessages.sendMultipleJobOffers(from, similarJobs)
 
-                    // Send "see more" prompt after results
-                    await this.botMessages.sendSeeMorePrompt(from)
+                    // Send "see more" prompt after 10 seconds
+                    setTimeout(() => {
+                      this.botMessages.sendSeeMorePrompt(from)
+                    }, 15_000)
 
                     // Store query for pagination
                     await this.botUserRepo.update(existingUser.id, {
@@ -246,9 +243,6 @@ export class WhatsAppMessageService {
                   }
                 }
               }
-
-              // Mark message as read
-              await this.botMessages.markAsRead(messageId)
             }
           }
         }

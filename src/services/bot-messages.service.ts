@@ -154,11 +154,9 @@ Mais voici quelques opportunités similaires qui pourraient vous intéresser �
   }
 
   /**
-   * Send multiple job offers in sequence with typing indicators
+   * Send multiple job offers in parallel
    * @param phoneNumber - Recipient's phone number
    * @param jobs - Array of job objects with title, company, location, and linkId
-   * @param delayBetween - Delay in milliseconds between each job (default: 1500ms)
-   * @param messageId - Message ID for typing indicator
    */
   async sendMultipleJobOffers(
     phoneNumber: string,
@@ -167,9 +165,7 @@ Mais voici quelques opportunités similaires qui pourraient vous intéresser �
       company: string
       location: string
       linkId: string
-    }>,
-    delayBetween: number = 1500,
-    messageId?: string
+    }>
   ): Promise<void> {
     try {
       Logger.info('Sending multiple job offers', {
@@ -177,29 +173,24 @@ Mais voici quelques opportunités similaires qui pourraient vous intéresser �
         count: jobs.length
       })
 
-      for (let i = 0; i < jobs.length; i++) {
-        const job = jobs[i]
+      await Promise.all(
+        jobs.map((job, i) => {
+          Logger.info('Sending job offer', {
+            index: i,
+            total: jobs.length,
+            title: job.title,
+            linkId: job.linkId
+          })
 
-        Logger.info('Sending job offer', {
-          index: i,
-          total: jobs.length,
-          title: job.title,
-          linkId: job.linkId
+          return this.sendJobOffer(
+            phoneNumber,
+            job.title,
+            job.company,
+            job.location,
+            job.linkId
+          )
         })
-
-        await this.sendJobOffer(
-          phoneNumber,
-          job.title,
-          job.company,
-          job.location,
-          job.linkId
-        )
-
-        // Add delay between messages (except after the last one)
-        if (i < jobs.length - 1) {
-          await Bun.sleep(delayBetween)
-        }
-      }
+      )
 
       Logger.success('All job offers sent', {
         phoneNumber,
@@ -212,7 +203,7 @@ Mais voici quelques opportunités similaires qui pourraient vous intéresser �
   }
 
   /**
-   * Send typing indicator
+   * Send typing indicator (also marks message as read automatically)
    * @param messageId - Message ID to show typing for
    */
   async sendTypingIndicator(messageId: string): Promise<void> {
@@ -224,19 +215,6 @@ Mais voici quelques opportunités similaires qui pourraient vous intéresser �
     } catch (error) {
       Logger.error('Error sending typing indicator', { error })
       // Don't throw - typing indicator failure shouldn't block message flow
-    }
-  }
-
-  /**
-   * Mark message as read
-   * @param messageId - Message ID to mark as read
-   */
-  async markAsRead(messageId: string): Promise<void> {
-    try {
-      await this.whatsapp.markMessageAsRead(messageId)
-    } catch (error) {
-      Logger.error('Error marking message as read', { error })
-      // Don't throw - read receipt failure shouldn't block message flow
     }
   }
 
