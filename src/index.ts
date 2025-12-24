@@ -6,6 +6,7 @@ import { ScraperSourceRepository } from './db/repositories/ScraperSourceReposito
 import { PersonalizedLinkRepository } from './db/repositories/PersonalizedLinkRepository'
 import { BotUserRepository } from './db/repositories/BotUserRepository'
 import { WhatsAppMessageService } from './services/whatsapp-message.service'
+import { ScrapeSchedulerService } from './services/scrape-scheduler.service'
 import { getWhatsAppMessageQueue, closeWhatsAppMessageQueue } from './queues/whatsapp-message.queue'
 import { Logger } from './utils/logger'
 
@@ -32,7 +33,6 @@ const app = new Elysia()
       status: 'running',
       message: 'WA Jobs Scraper API',
       endpoints: {
-        health: '/health',
       },
     }
   })
@@ -138,6 +138,36 @@ const app = new Elysia()
       Logger.error('Error enqueueing WhatsApp message', { error })
       set.status = 500
       return { error: 'Internal server error' }
+    }
+  })
+  .post('/api/scrape/trigger', async ({ set }) => {
+    try {
+      Logger.info('Manual scrape trigger requested')
+
+      const scraperSourceRepo = new ScraperSourceRepository()
+      const scheduler = new ScrapeSchedulerService(
+        scraperSourceRepo,
+        process.env.REDIS_HOST || 'localhost',
+        parseInt(process.env.REDIS_PORT || '6379'),
+        process.env.REDIS_PASSWORD,
+        parseInt(process.env.DEFAULT_SCRAPE_INTERVAL_MINUTES || '30'),
+        parseInt(process.env.MAX_PAGES_PER_SCRAPE || '3')
+      )
+
+      await scheduler.checkAndEnqueueScrapingTasks()
+
+      Logger.success('Scraping tasks triggered successfully')
+
+      set.status = 200
+      return {
+        success: true,
+        message: 'Scraping tasks enqueued. Check scraper worker logs for progress.',
+        timestamp: new Date().toISOString(),
+      }
+    } catch (error) {
+      Logger.error('Error triggering scrape', { error })
+      set.status = 500
+      return { error: 'Failed to trigger scraping tasks' }
     }
   })
   .get('/:id', async ({ params: { id }, request, set }) => {
