@@ -190,6 +190,14 @@ export class WhatsAppMessageService {
               // Search for jobs (max 3 results)
               const jobs = await this.jobSearch.searchJobs(userQuery, from, offset)
 
+              Logger.info('Jobs retrieved from search', {
+                from,
+                query: userQuery,
+                offset,
+                count: jobs.length,
+                jobs: jobs.map(j => ({ title: j.title, linkId: j.linkId }))
+              })
+
               if (jobs.length > 0) {
                 await this.botMessages.showTyping(messageId)
                 await Bun.sleep(800)

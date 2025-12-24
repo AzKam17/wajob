@@ -34,14 +34,31 @@ export class JobSearchService {
       // This uses the ILIKE operator for case-insensitive pattern matching
       const jobs = await this.jobRepo.searchByQuery(query, this.MAX_RESULTS, offset)
 
+      Logger.info('Raw jobs from database', {
+        query,
+        count: jobs.length,
+        jobIds: jobs.map(j => j.id)
+      })
+
       if (jobs.length === 0) {
         Logger.info('No jobs found', { query })
         return []
       }
 
+      // Filter out duplicates by ID (defensive - shouldn't happen but just in case)
+      const seenIds = new Set<string>()
+      const uniqueJobs = jobs.filter(job => {
+        if (seenIds.has(job.id)) {
+          Logger.warn('Duplicate job detected in database results', { jobId: job.id, title: job.title })
+          return false
+        }
+        seenIds.add(job.id)
+        return true
+      })
+
       // Create personalized links for each job
       const results: JobSearchResult[] = []
-      for (const job of jobs) {
+      for (const job of uniqueJobs) {
         const link = await this.linkRepo.create({
           phoneNumber,
           jobAdId: job.id,
@@ -88,13 +105,31 @@ export class JobSearchService {
 
       const jobs = await this.jobRepo.searchByQuery(mainKeyword, this.MAX_RESULTS, offset)
 
+      Logger.info('Raw similar jobs from database', {
+        query,
+        mainKeyword,
+        count: jobs.length,
+        jobIds: jobs.map(j => j.id)
+      })
+
       if (jobs.length === 0) {
         return []
       }
 
+      // Filter out duplicates by ID
+      const seenIds = new Set<string>()
+      const uniqueJobs = jobs.filter(job => {
+        if (seenIds.has(job.id)) {
+          Logger.warn('Duplicate job detected in similar jobs results', { jobId: job.id, title: job.title })
+          return false
+        }
+        seenIds.add(job.id)
+        return true
+      })
+
       // Create personalized links
       const results: JobSearchResult[] = []
-      for (const job of jobs) {
+      for (const job of uniqueJobs) {
         const link = await this.linkRepo.create({
           phoneNumber,
           jobAdId: job.id,

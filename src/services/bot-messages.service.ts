@@ -180,6 +180,13 @@ Mais voici quelques opportunités similaires qui pourraient vous intéresser �
       for (let i = 0; i < jobs.length; i++) {
         const job = jobs[i]
 
+        Logger.info('Sending job offer', {
+          index: i,
+          total: jobs.length,
+          title: job.title,
+          linkId: job.linkId
+        })
+
         await this.sendJobOffer(
           phoneNumber,
           job.title,
