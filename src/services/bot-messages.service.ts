@@ -228,24 +228,6 @@ Mais voici quelques opportunités similaires qui pourraient vous intéresser �
   }
 
   /**
-   * Show typing indicator for a phone number
-   * @param phoneNumber - Recipient's phone number
-   * @param duration - Duration in milliseconds (default: 1000ms)
-   */
-  async showTyping(messageId: string): Promise<void> {
-    try {
-      // Send typing on status (this is a visual indicator in WhatsApp)
-      await this.whatsapp.sendTypingIndicator({
-        messageId,
-        type: 'text'
-      })
-    } catch (error) {
-      Logger.debug('Typing indicator not supported or failed', { error })
-      // Fallback to just a delay if typing indicator fails
-    }
-  }
-
-  /**
    * Mark message as read
    * @param messageId - Message ID to mark as read
    */

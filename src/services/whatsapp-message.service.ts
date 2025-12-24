@@ -67,6 +67,9 @@ export class WhatsAppMessageService {
               continue
             }
 
+            // Send typing indicator at the start of processing
+            await this.botMessages.sendTypingIndicator(messageId)
+
             // Ice breaker messages (configured in setup-ice-breakers.ts)
             const ICE_BREAKER_MESSAGES = [
               'Je cherche un emploi.',
@@ -115,9 +118,6 @@ export class WhatsAppMessageService {
                   lastMessageAt: new Date(),
                 })
               }
-
-              // Send typing indicator
-              await this.botMessages.sendTypingIndicator(messageId)
 
               // Send welcome flow (template + follow-up text after 2 seconds)
               await this.botMessages.sendWelcomeFlow(from)
@@ -199,17 +199,8 @@ export class WhatsAppMessageService {
               })
 
               if (jobs.length > 0) {
-                await this.botMessages.showTyping(messageId)
-                await Bun.sleep(800)
                 // Found exact matches - send them
                 await this.botMessages.sendMultipleJobOffers(from, jobs, 1500, messageId)
-
-                // Wait before sending "see more" prompt to ensure proper message order
-                await Bun.sleep(500)
-
-                // Show typing indicator before "see more" prompt
-                await this.botMessages.showTyping(messageId)
-                await Bun.sleep(800)
 
                 // Send "see more" prompt after results
                 await this.botMessages.sendSeeMorePrompt(from)
@@ -224,9 +215,7 @@ export class WhatsAppMessageService {
                 })
               } else {
                 if (offset > 0) {
-                  // No more results available - show typing then message
-                  await this.botMessages.showTyping(messageId)
-                  await Bun.sleep(800)
+                  // No more results available
                   await this.botMessages.sendTextMessage(
                     from,
                     "Il n'y a plus d'offres disponibles pour cette recherche. 😔\n\nVous pouvez effectuer une nouvelle recherche! 🔍"
@@ -240,12 +229,7 @@ export class WhatsAppMessageService {
                     await this.botMessages.sendNoExactMatchMessage(from)
                     await this.botMessages.sendMultipleJobOffers(from, similarJobs, 1500, messageId)
 
-                    // Wait before sending "see more" prompt to ensure proper message order
-                    await Bun.sleep(500)
-
-                    // Show typing indicator before "see more" prompt
-                    await this.botMessages.showTyping(messageId)
-                    await Bun.sleep(800)
+                    // Send "see more" prompt after results
                     await this.botMessages.sendSeeMorePrompt(from)
 
                     // Store query for pagination
@@ -257,9 +241,7 @@ export class WhatsAppMessageService {
                       }
                     })
                   } else {
-                    // No jobs at all - show typing then message
-                    await this.botMessages.showTyping(messageId)
-                    await Bun.sleep(800)
+                    // No jobs at all
                     await this.botMessages.sendNoJobsFoundMessage(from, userQuery)
                   }
                 }
