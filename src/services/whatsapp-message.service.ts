@@ -9,8 +9,20 @@ export class WhatsAppMessageService {
   private botUserRepo = new BotUserRepository()
   private jobSearch = new JobSearchService()
 
+  // Track processed message IDs to prevent duplicate processing
+  private processedMessages = new Set<string>()
+  private readonly MAX_PROCESSED_CACHE = 1000
+
   async handleIncomingMessage(payload: WhatsAppWebhookPayload): Promise<void> {
     try {
+      Logger.info('Webhook received', {
+        entriesCount: payload.entry.length,
+        changesCount: payload.entry.reduce((acc, e) => acc + e.changes.length, 0),
+        messagesCount: payload.entry.reduce((acc, e) =>
+          acc + e.changes.reduce((acc2, c) => acc2 + (c.value.messages?.length || 0), 0), 0
+        )
+      })
+
       for (const entry of payload.entry) {
         for (const change of entry.changes) {
           const { messages, contacts } = change.value
@@ -24,6 +36,21 @@ export class WhatsAppMessageService {
             const from = message.from
             const messageId = message.id
             const contactName = contacts?.[0]?.profile?.name || 'User'
+
+            // Check if we've already processed this message
+            if (this.processedMessages.has(messageId)) {
+              Logger.warn('Duplicate message detected, skipping', { messageId, from })
+              continue
+            }
+
+            // Add to processed set
+            this.processedMessages.add(messageId)
+
+            // Limit cache size to prevent memory issues
+            if (this.processedMessages.size > this.MAX_PROCESSED_CACHE) {
+              const firstItem = this.processedMessages.values().next().value
+              this.processedMessages.delete(firstItem)
+            }
 
             Logger.info('Processing incoming message', {
               from,

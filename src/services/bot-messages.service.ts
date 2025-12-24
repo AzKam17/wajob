@@ -28,7 +28,7 @@ export class BotMessages {
       Logger.success('Welcome template sent', { phoneNumber })
 
       // Step 2: Wait 2 seconds before sending follow-up
-      await this.delay(2000)
+      await Bun.sleep(2000)
 
       // Step 3: Send follow-up text message
       const followUpMessage = 'Dites-moi simplement le titre du poste que vous recherchez (ex : Développeur web, Comptable, Community Manager), et je vous enverrai des offres récentes correspondant à votre recherche 📍💼'
