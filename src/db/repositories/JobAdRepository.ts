@@ -59,8 +59,8 @@ export class JobAdRepository extends BaseRepository<JobAdEntity> {
   async searchByQuery(query: string, limit: number = 3, offset: number = 0): Promise<JobAd[]> {
     const entities = await this.repository
       .createQueryBuilder('job')
-      .where('job.title ILIKE :query', { query: `%${query}%` })
-      .orWhere('job.description ILIKE :query', { query: `%${query}%` })
+      .where('job.deletedAt IS NULL')
+      .andWhere('(job.title ILIKE :query OR job.description ILIKE :query OR job.company ILIKE :query OR job.location ILIKE :query)', { query: `%${query}%` })
       .orderBy('job.postedDate', 'DESC')
       .skip(offset)
       .take(limit)
