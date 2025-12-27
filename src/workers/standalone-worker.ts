@@ -7,6 +7,7 @@ import { closeWhatsAppMessageQueue } from '../queues/whatsapp-message.queue'
 import { ScraperSourceRepository } from '../db/repositories/ScraperSourceRepository'
 import { ScrapeSchedulerService } from '../services/scrape-scheduler.service'
 import { Logger } from '../utils/logger'
+import { Cron } from 'croner'
 
 // Initialize database
 await initializeDatabase()
@@ -38,17 +39,31 @@ const scheduler = new ScrapeSchedulerService(
 await scheduler.checkAndEnqueueScrapingTasks()
 Logger.success('Initial scrape check completed')
 
-// Set up periodic scrape checks (every 20 minutes)
-const checkInterval = setInterval(async () => {
-  Logger.info('Running periodic scrape check')
-  await scheduler.checkAndEnqueueScrapingTasks()
-}, 20 * 60 * 1000) // 20 minutes in milliseconds
+// Set up periodic scrape checks using cron
+// Weekday schedule: Every 20 minutes, Mon-Fri 9am-8pm
+const weekdayCron = new Cron(
+  process.env.SCRAPE_CHECK_CRON || '*/20 9-19 * * 1-5',
+  async () => {
+    Logger.info('Running periodic scrape check (weekday)')
+    await scheduler.checkAndEnqueueScrapingTasks()
+  }
+)
 
-Logger.success('Standalone worker started with periodic scrape checks')
+// Weekend schedule: 10am & 4pm on Sat-Sun
+const weekendCron = new Cron(
+  process.env.SCRAPE_CHECK_CRON_WEEKEND || '0 10,16 * * 0,6',
+  async () => {
+    Logger.info('Running periodic scrape check (weekend)')
+    await scheduler.checkAndEnqueueScrapingTasks()
+  }
+)
+
+Logger.success('Standalone worker started with cron-based scrape checks (Mon-Fri 9am-8pm every 20min, Sat-Sun 10am & 4pm)')
 
 const shutdown = async (signal: string) => {
   Logger.info(`${signal} received, shutting down workers gracefully`)
-  clearInterval(checkInterval)
+  weekdayCron.stop()
+  weekendCron.stop()
   await scrapeWorker.close()
   await whatsappWorker.close()
   await closeScrapeQueue()
