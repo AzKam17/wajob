@@ -6,6 +6,24 @@ import { Logger } from '../utils/logger'
 import { ConversationStateService } from './conversation-state.service'
 import { ChatHistoryService } from './chat-history.service'
 
+/**
+ * Context object passed to state handlers
+ */
+interface MessageContext {
+  from: string
+  messageText: string
+  sessionId: string
+  state: string
+  context: any
+  shouldSendWelcome: boolean
+  existingUser: any
+}
+
+/**
+ * State handler function type
+ */
+type StateHandler = (ctx: MessageContext) => Promise<void>
+
 export class WhatsAppMessageService {
   private botMessages = new BotMessages()
   private botUserRepo = new BotUserRepository()
@@ -14,6 +32,19 @@ export class WhatsAppMessageService {
   // Track processed message IDs to prevent duplicate processing
   private processedMessages = new Set<string>()
   private readonly MAX_PROCESSED_CACHE = 1000
+
+  /**
+   * Table-Driven Pattern: Command Map for state handling
+   * Maps conversation states to their respective handler functions
+   */
+  private readonly stateHandlers: Map<string, StateHandler> = new Map([
+    ['idle', this.handleIdleState.bind(this)],
+    ['welcomed', this.handleWelcomedState.bind(this)],
+    ['awaitingJobTitle', this.handleAwaitingJobTitleState.bind(this)],
+    ['searchingJobs', this.handleJobSearchState.bind(this)],
+    ['displayingResults', this.handleJobSearchState.bind(this)],
+    ['browsing', this.handleJobSearchState.bind(this)],
+  ])
 
   constructor(
     private readonly conversationState: ConversationStateService,
@@ -78,7 +109,6 @@ export class WhatsAppMessageService {
             await this.botMessages.sendTypingIndicator(messageId)
 
             const messageText = message.text.body.trim()
-            const isSeeMore = messageText.toLowerCase() === 'voir plus'
 
             // Get session ID for chat history
             const sessionId = await this.conversationState.getSessionId(from)
@@ -116,214 +146,20 @@ export class WhatsAppMessageService {
               })
             }
 
-            // Handle state transitions
-            if (shouldSendWelcome) {
-              Logger.info('Sending welcome flow', { from, state })
-
-              // Send welcome flow (template + follow-up text after 2 seconds)
-              await this.botMessages.sendWelcomeFlow(from)
-
-              // Save outgoing messages to chat history
-              await this.chatHistory.saveOutgoingTemplateMessage(
+            // Table-driven dispatch: Look up and execute the appropriate state handler
+            const handler = this.stateHandlers.get(state)
+            if (handler) {
+              await handler({
                 from,
+                messageText,
                 sessionId,
-                'eska_job_title_prompt',
-                'welcomed'
-              )
-
-              // Mark welcome as sent in state machine
-              await this.conversationState.markWelcomeSent(from)
-
-              // Update conversation metadata
-              await this.chatHistory.updateConversationMetadata(from, { welcomeSent: true })
-
-              Logger.success('Welcome flow sent successfully', { to: from })
-            } else if (state === 'awaitingJobTitle' && !shouldSendWelcome) {
-              // User is in awaiting state but we didn't just send welcome
-              // This means they sent a message after welcome or in a moderately stale conversation
-              const lastMessageTime = existingUser?.lastMessageAt
-                ? new Date(existingUser.lastMessageAt)
-                : null
-              const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000)
-              const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000)
-
-              const isModeratelyStale =
-                lastMessageTime &&
-                lastMessageTime < twoMinutesAgo &&
-                lastMessageTime >= tenMinutesAgo
-
-              if (isModeratelyStale) {
-                Logger.info('Sending re-enter job title prompt', {
-                  from,
-                  reason: 'moderately_stale_conversation',
-                })
-
-                // Send re-enter prompt
-                await this.botMessages.sendReenterJobTitlePrompt(from)
-
-                // Save to chat history
-                await this.chatHistory.saveOutgoingTextMessage(
-                  from,
-                  sessionId,
-                  'Re-enter job title prompt',
-                  state
-                )
-
-                Logger.success('Re-enter prompt sent successfully', { to: from })
-              }
-            } else if (state === 'searchingJobs' || state === 'displayingResults' || state === 'browsing') {
-              // Process job search
-              Logger.info('Processing job search', {
-                from,
                 state,
-                messageText: message.text.body,
+                context,
+                shouldSendWelcome,
+                existingUser,
               })
-
-              let userQuery: string
-              let offset: number = 0
-
-              if (isSeeMore) {
-                // User wants to see more results - use stored query from context
-                const lastQuery = context.lastQuery
-                const lastOffset = context.lastOffset || 0
-
-                if (!lastQuery) {
-                  // No previous query stored - ask them to search first
-                  await this.botMessages.sendTextMessage(
-                    from,
-                    "Veuillez d'abord effectuer une recherche en m'indiquant le poste que vous recherchez! 💼"
-                  )
-
-                  // Save to chat history
-                  await this.chatHistory.saveOutgoingTextMessage(
-                    from,
-                    sessionId,
-                    "Veuillez d'abord effectuer une recherche...",
-                    state
-                  )
-
-                  continue
-                }
-
-                userQuery = lastQuery
-                offset = lastOffset + 3 // Next page
-
-                // Update state machine with new offset
-                await this.conversationState.markPaginationRequested(from, offset)
-
-                Logger.info('Loading more results', { from, query: userQuery, offset })
-              } else {
-                // New search query
-                userQuery = message.text.body
-                offset = 0
-                Logger.info('Processing new job search', { from, query: userQuery })
-              }
-
-              // Search for jobs (max 3 results)
-              const jobs = await this.jobSearch.searchJobs(userQuery, from, offset)
-
-              Logger.info('Jobs retrieved from search', {
-                from,
-                query: userQuery,
-                offset,
-                count: jobs.length,
-                jobs: jobs.map((j) => ({ title: j.title, linkId: j.linkId })),
-              })
-
-              if (jobs.length > 0) {
-                // Found exact matches - send them
-                await this.botMessages.sendMultipleJobOffers(from, jobs)
-
-                // Save to chat history
-                await this.chatHistory.saveOutgoingInteractiveMessage(
-                  from,
-                  sessionId,
-                  'Job offers',
-                  jobs.map((j) => j.title),
-                  state,
-                  jobs.length
-                )
-
-                // Update state machine with search completion
-                await this.conversationState.markSearchCompleted(from, userQuery, offset)
-
-                // Update conversation metadata - increment search count and job offers shown
-                const conversation = await this.chatHistory.updateConversationMetadata(from, {
-                  jobOffersShownCount: jobs.length,
-                })
-
-                // Send "see more" prompt after 15 seconds
-                setTimeout(() => {
-                  this.botMessages.sendSeeMorePrompt(from)
-                }, 15_000)
-
-                // Store query and offset for pagination in database (backwards compatibility)
-                await this.botUserRepo.update(existingUser.id, {
-                  preferences: {
-                    ...existingUser.preferences,
-                    lastQuery: userQuery,
-                    lastOffset: offset,
-                  },
-                })
-              } else {
-                if (offset > 0) {
-                  // No more results available
-                  const noMoreMessage =
-                    "Il n'y a plus d'offres disponibles pour cette recherche. 😔\n\nVous pouvez effectuer une nouvelle recherche! 🔍"
-
-                  await this.botMessages.sendTextMessage(from, noMoreMessage)
-
-                  // Save to chat history
-                  await this.chatHistory.saveOutgoingTextMessage(from, sessionId, noMoreMessage, state)
-                } else {
-                  // No exact matches on first page - try similar jobs
-                  const similarJobs = await this.jobSearch.searchSimilarJobs(userQuery, from, 0)
-
-                  if (similarJobs.length > 0) {
-                    // Found similar jobs - send intro message first
-                    await this.botMessages.sendNoExactMatchMessage(from)
-                    await this.botMessages.sendMultipleJobOffers(from, similarJobs)
-
-                    // Save to chat history
-                    await this.chatHistory.saveOutgoingInteractiveMessage(
-                      from,
-                      sessionId,
-                      'Similar job offers',
-                      similarJobs.map((j) => j.title),
-                      state,
-                      similarJobs.length
-                    )
-
-                    // Update state machine
-                    await this.conversationState.markSearchCompleted(from, userQuery, 0)
-
-                    // Send "see more" prompt after 15 seconds
-                    setTimeout(() => {
-                      this.botMessages.sendSeeMorePrompt(from)
-                    }, 15_000)
-
-                    // Store query for pagination
-                    await this.botUserRepo.update(existingUser.id, {
-                      preferences: {
-                        ...existingUser.preferences,
-                        lastQuery: userQuery,
-                        lastOffset: 0,
-                      },
-                    })
-                  } else {
-                    // No jobs at all
-                    await this.botMessages.sendNoJobsFoundMessage(from, userQuery)
-
-                    // Save to chat history
-                    await this.chatHistory.saveOutgoingTextMessage(
-                      from,
-                      sessionId,
-                      `No jobs found for: ${userQuery}`,
-                      state
-                    )
-                  }
-                }
-              }
+            } else {
+              Logger.warn('No handler found for state', { state, from })
             }
           }
         }
@@ -344,5 +180,289 @@ export class WhatsAppMessageService {
 
     Logger.warn('Webhook verification failed', { mode, token })
     return false
+  }
+
+  /**
+   * STATE HANDLERS - Table-Driven Pattern Implementation
+   * Each function handles a specific conversation state
+   */
+
+  /**
+   * Handle idle state - typically shouldn't execute actions here
+   * as the welcome flow is triggered by shouldSendWelcome flag
+   */
+  private async handleIdleState(ctx: MessageContext): Promise<void> {
+    if (ctx.shouldSendWelcome) {
+      await this.sendWelcomeFlow(ctx)
+    }
+  }
+
+  /**
+   * Handle welcomed state - user just received welcome message
+   */
+  private async handleWelcomedState(ctx: MessageContext): Promise<void> {
+    if (ctx.shouldSendWelcome) {
+      await this.sendWelcomeFlow(ctx)
+    }
+  }
+
+  /**
+   * Handle awaiting job title state - user is expected to provide job title
+   */
+  private async handleAwaitingJobTitleState(ctx: MessageContext): Promise<void> {
+    if (ctx.shouldSendWelcome) {
+      await this.sendWelcomeFlow(ctx)
+      return
+    }
+
+    // Check if conversation is moderately stale
+    const lastMessageTime = ctx.existingUser?.lastMessageAt
+      ? new Date(ctx.existingUser.lastMessageAt)
+      : null
+    const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000)
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000)
+
+    const isModeratelyStale =
+      lastMessageTime && lastMessageTime < twoMinutesAgo && lastMessageTime >= tenMinutesAgo
+
+    if (isModeratelyStale) {
+      Logger.info('Sending re-enter job title prompt', {
+        from: ctx.from,
+        reason: 'moderately_stale_conversation',
+      })
+
+      await this.botMessages.sendReenterJobTitlePrompt(ctx.from)
+      await this.chatHistory.saveOutgoingTextMessage(
+        ctx.from,
+        ctx.sessionId,
+        'Re-enter job title prompt',
+        ctx.state
+      )
+
+      Logger.success('Re-enter prompt sent successfully', { to: ctx.from })
+    }
+  }
+
+  /**
+   * Handle job search states (searchingJobs, displayingResults, browsing)
+   * Processes job queries and pagination requests
+   */
+  private async handleJobSearchState(ctx: MessageContext): Promise<void> {
+    Logger.info('Processing job search', {
+      from: ctx.from,
+      state: ctx.state,
+      messageText: ctx.messageText,
+    })
+
+    const isSeeMore = ctx.messageText.toLowerCase() === 'voir plus'
+    let userQuery: string
+    let offset: number = 0
+
+    if (isSeeMore) {
+      // Handle pagination request
+      const result = await this.handlePaginationRequest(ctx)
+      if (!result) return // Early exit if no previous query
+
+      userQuery = result.query
+      offset = result.offset
+    } else {
+      // Handle new search query
+      userQuery = ctx.messageText
+      offset = 0
+      Logger.info('Processing new job search', { from: ctx.from, query: userQuery })
+    }
+
+    // Execute job search
+    await this.executeJobSearch(ctx, userQuery, offset)
+  }
+
+  /**
+   * HELPER FUNCTIONS - Extracted actions from state handlers
+   */
+
+  /**
+   * Send welcome flow to user
+   */
+  private async sendWelcomeFlow(ctx: MessageContext): Promise<void> {
+    Logger.info('Sending welcome flow', { from: ctx.from, state: ctx.state })
+
+    await this.botMessages.sendWelcomeFlow(ctx.from)
+    await this.chatHistory.saveOutgoingTemplateMessage(
+      ctx.from,
+      ctx.sessionId,
+      'eska_job_title_prompt',
+      'welcomed'
+    )
+    await this.conversationState.markWelcomeSent(ctx.from)
+    await this.chatHistory.updateConversationMetadata(ctx.from, { welcomeSent: true })
+
+    Logger.success('Welcome flow sent successfully', { to: ctx.from })
+  }
+
+  /**
+   * Handle "voir plus" pagination request
+   * Returns query and offset, or null if no previous query exists
+   */
+  private async handlePaginationRequest(
+    ctx: MessageContext
+  ): Promise<{ query: string; offset: number } | null> {
+    const lastQuery = ctx.context.lastQuery
+    const lastOffset = ctx.context.lastOffset || 0
+
+    if (!lastQuery) {
+      await this.botMessages.sendTextMessage(
+        ctx.from,
+        "Veuillez d'abord effectuer une recherche en m'indiquant le poste que vous recherchez! 💼"
+      )
+      await this.chatHistory.saveOutgoingTextMessage(
+        ctx.from,
+        ctx.sessionId,
+        "Veuillez d'abord effectuer une recherche...",
+        ctx.state
+      )
+      return null
+    }
+
+    const offset = lastOffset + 3
+    await this.conversationState.markPaginationRequested(ctx.from, offset)
+
+    Logger.info('Loading more results', { from: ctx.from, query: lastQuery, offset })
+
+    return { query: lastQuery, offset }
+  }
+
+  /**
+   * Execute job search and send results
+   */
+  private async executeJobSearch(
+    ctx: MessageContext,
+    userQuery: string,
+    offset: number
+  ): Promise<void> {
+    const jobs = await this.jobSearch.searchJobs(userQuery, ctx.from, offset)
+
+    Logger.info('Jobs retrieved from search', {
+      from: ctx.from,
+      query: userQuery,
+      offset,
+      count: jobs.length,
+      jobs: jobs.map((j) => ({ title: j.title, linkId: j.linkId })),
+    })
+
+    if (jobs.length > 0) {
+      await this.sendJobResults(ctx, jobs, userQuery, offset)
+    } else {
+      await this.handleNoJobsFound(ctx, userQuery, offset)
+    }
+  }
+
+  /**
+   * Send job results to user
+   */
+  private async sendJobResults(
+    ctx: MessageContext,
+    jobs: any[],
+    userQuery: string,
+    offset: number
+  ): Promise<void> {
+    await this.botMessages.sendMultipleJobOffers(ctx.from, jobs)
+    await this.chatHistory.saveOutgoingInteractiveMessage(
+      ctx.from,
+      ctx.sessionId,
+      'Job offers',
+      jobs.map((j) => j.title),
+      ctx.state,
+      jobs.length
+    )
+
+    await this.conversationState.markSearchCompleted(ctx.from, userQuery, offset)
+    await this.chatHistory.updateConversationMetadata(ctx.from, {
+      jobOffersShownCount: jobs.length,
+    })
+
+    // Send "see more" prompt after 15 seconds
+    setTimeout(() => {
+      this.botMessages.sendSeeMorePrompt(ctx.from)
+    }, 15_000)
+
+    // Store query and offset for pagination (backwards compatibility)
+    if (ctx.existingUser) {
+      await this.botUserRepo.update(ctx.existingUser.id, {
+        preferences: {
+          ...ctx.existingUser.preferences,
+          lastQuery: userQuery,
+          lastOffset: offset,
+        },
+      })
+    }
+  }
+
+  /**
+   * Handle case when no jobs are found
+   */
+  private async handleNoJobsFound(
+    ctx: MessageContext,
+    userQuery: string,
+    offset: number
+  ): Promise<void> {
+    if (offset > 0) {
+      // No more results available for pagination
+      const noMoreMessage =
+        "Il n'y a plus d'offres disponibles pour cette recherche. 😔\n\nVous pouvez effectuer une nouvelle recherche! 🔍"
+
+      await this.botMessages.sendTextMessage(ctx.from, noMoreMessage)
+      await this.chatHistory.saveOutgoingTextMessage(ctx.from, ctx.sessionId, noMoreMessage, ctx.state)
+    } else {
+      // No exact matches on first page - try similar jobs
+      await this.searchSimilarJobs(ctx, userQuery)
+    }
+  }
+
+  /**
+   * Search and send similar jobs when no exact matches found
+   */
+  private async searchSimilarJobs(ctx: MessageContext, userQuery: string): Promise<void> {
+    const similarJobs = await this.jobSearch.searchSimilarJobs(userQuery, ctx.from, 0)
+
+    if (similarJobs.length > 0) {
+      await this.botMessages.sendNoExactMatchMessage(ctx.from)
+      await this.botMessages.sendMultipleJobOffers(ctx.from, similarJobs)
+
+      await this.chatHistory.saveOutgoingInteractiveMessage(
+        ctx.from,
+        ctx.sessionId,
+        'Similar job offers',
+        similarJobs.map((j) => j.title),
+        ctx.state,
+        similarJobs.length
+      )
+
+      await this.conversationState.markSearchCompleted(ctx.from, userQuery, 0)
+
+      // Send "see more" prompt after 15 seconds
+      setTimeout(() => {
+        this.botMessages.sendSeeMorePrompt(ctx.from)
+      }, 15_000)
+
+      // Store query for pagination
+      if (ctx.existingUser) {
+        await this.botUserRepo.update(ctx.existingUser.id, {
+          preferences: {
+            ...ctx.existingUser.preferences,
+            lastQuery: userQuery,
+            lastOffset: 0,
+          },
+        })
+      }
+    } else {
+      // No jobs at all
+      await this.botMessages.sendNoJobsFoundMessage(ctx.from, userQuery)
+      await this.chatHistory.saveOutgoingTextMessage(
+        ctx.from,
+        ctx.sessionId,
+        `No jobs found for: ${userQuery}`,
+        ctx.state
+      )
+    }
   }
 }
