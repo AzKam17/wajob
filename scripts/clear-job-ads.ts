@@ -1,15 +1,14 @@
 import { initializeDatabase } from '../src/db'
-import { JobAdRepository } from '../src/db/repositories/JobAdRepository'
+import { AppDataSource } from '../src/db/data-source'
 
 await initializeDatabase()
-
-const jobAdRepo = new JobAdRepository()
 
 console.log('🗑️  Clearing job ads table...\n')
 
 try {
-  const allJobs = await jobAdRepo.findAll()
-  const totalJobs = allJobs.length
+  // Get count before deletion
+  const countResult = await AppDataSource.query('SELECT COUNT(*) as count FROM job_ads')
+  const totalJobs = parseInt(countResult[0].count)
 
   if (totalJobs === 0) {
     console.log('ℹ️  Job ads table is already empty')
@@ -18,9 +17,8 @@ try {
 
   console.log(`📊 Found ${totalJobs} job ads to delete (hard delete)`)
 
-  for (const job of allJobs) {
-    await jobAdRepo.hardDelete(job.id!)
-  }
+  // Execute raw DELETE query
+  await AppDataSource.query('DELETE FROM job_ads')
 
   console.log(`\n✅ Successfully hard deleted ${totalJobs} job ads!`)
 } catch (error) {
