@@ -215,26 +215,30 @@ async function createIndexes() {
 
     const sizeQuery = `
       SELECT
-        schemaname,
-        tablename,
-        indexname,
-        pg_size_pretty(pg_relation_size(indexrelid)) AS index_size
-      FROM pg_stat_user_indexes
-      WHERE schemaname = 'public'
-      ORDER BY pg_relation_size(indexrelid) DESC
+        i.schemaname,
+        i.relname as tablename,
+        i.indexrelname as indexname,
+        pg_size_pretty(pg_relation_size(i.indexrelid)) AS index_size
+      FROM pg_stat_user_indexes i
+      WHERE i.schemaname = 'wajobs'
+      ORDER BY pg_relation_size(i.indexrelid) DESC
       LIMIT 20
     `
 
     const sizes = await AppDataSource.query(sizeQuery)
 
-    console.log('Top 20 largest indexes:')
-    console.log('─────────────────────────────────────────────────────────')
-    sizes.forEach((row: any, i: number) => {
-      console.log(
-        `${(i + 1).toString().padStart(2, ' ')}. ${row.indexname.padEnd(40, ' ')} ${row.index_size.padStart(10, ' ')}`
-      )
-    })
-    console.log('─────────────────────────────────────────────────────────\n')
+    if (sizes.length > 0) {
+      console.log('Top 20 largest indexes:')
+      console.log('─────────────────────────────────────────────────────────')
+      sizes.forEach((row: any, i: number) => {
+        console.log(
+          `${(i + 1).toString().padStart(2, ' ')}. ${row.indexname.padEnd(40, ' ')} ${row.index_size.padStart(10, ' ')}`
+        )
+      })
+      console.log('─────────────────────────────────────────────────────────\n')
+    } else {
+      console.log('No indexes found yet.\n')
+    }
 
     // Check for missing indexes
     console.log('🔍 Checking for potentially missing indexes...\n')
@@ -254,18 +258,22 @@ async function createIndexes() {
       LIMIT 10
     `
 
-    const potentialIndexes = await AppDataSource.query(missingIndexQuery)
+    try {
+      const potentialIndexes = await AppDataSource.query(missingIndexQuery)
 
-    if (potentialIndexes.length > 0) {
-      console.log('⚠️  Columns that might benefit from indexes:')
-      potentialIndexes.forEach((row: any) => {
-        console.log(
-          `   - ${row.tablename}.${row.attname} (distinct values: ${row.n_distinct}, correlation: ${row.correlation})`
-        )
-      })
-      console.log()
-    } else {
-      console.log('✅ No obvious missing indexes detected\n')
+      if (potentialIndexes.length > 0) {
+        console.log('⚠️  Columns that might benefit from indexes:')
+        potentialIndexes.forEach((row: any) => {
+          console.log(
+            `   - ${row.tablename}.${row.attname} (distinct values: ${row.n_distinct}, correlation: ${row.correlation})`
+          )
+        })
+        console.log()
+      } else {
+        console.log('✅ No obvious missing indexes detected\n')
+      }
+    } catch (error: any) {
+      console.log('⚠️  Could not check for missing indexes (table may be empty)\n')
     }
 
     console.log('✨ Done!\n')
