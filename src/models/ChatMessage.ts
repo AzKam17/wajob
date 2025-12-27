@@ -27,7 +27,7 @@ export const ConversationSessionSchema = z.object({
   sessionId: z.string(),
   phoneNumber: z.string(),
   currentState: z.string(),
-  context: z.record(z.any()),
+  context: z.record(z.string(), z.unknown()),
   lastMessageAt: z.number(),
   welcomeSentAt: z.number().optional(),
   createdAt: z.number(),

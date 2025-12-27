@@ -64,10 +64,6 @@ export class ConversationStateService {
     if (!actor) {
       actor = createActor(conversationMachine, {
         input: session.context as ConversationContext,
-        snapshot: {
-          value: session.currentState,
-          context: session.context as ConversationContext,
-        } as any,
       })
       actor.start()
       this.actors.set(phoneNumber, actor)
