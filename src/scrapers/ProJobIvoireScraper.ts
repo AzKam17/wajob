@@ -3,6 +3,7 @@ import { JobAd, type JobAdData } from '@models/JobAd'
 interface ProJobIvoireJob {
   title: string
   url: string
+  company: string
   location: string
   postedDate: string
   closingDate?: string
@@ -56,7 +57,7 @@ export class ProJobIvoireScraper {
 
     // Match each article block
     const articleRegex =
-      /<article[^>]*>[\s\S]*?<a[^>]*href="([^"]*)"[^>]*title="[^"]*&quot;([^&]*)&quot;"[\s\S]*?<em>([^<]*)<\/em>[\s\S]*?<span class="job-date__posted"[^>]*>\s*([^<\s][^<]*)<\/span>[\s\S]*?(?:<span class="job-date__closing"[^>]*>\s*-\s*([^<\s][^<]*)<\/span>)?[\s\S]*?<\/article>/g
+      /<article[^>]*>[\s\S]*?<a[^>]*href="([^"]*)"[^>]*title="[^"]*&quot;([^&]*)&quot;"[\s\S]*?<em>([^<]*)<\/em>[\s\S]*?<span class="job-company"[^>]*>[\s\S]*?<span>([^<]*)<\/span>[\s\S]*?<span class="job-date__posted"[^>]*>\s*([^<\s][^<]*)<\/span>[\s\S]*?(?:<span class="job-date__closing"[^>]*>\s*-\s*([^<\s][^<]*)<\/span>)?[\s\S]*?<\/article>/g
 
     let match
     while ((match = articleRegex.exec(html)) !== null) {
@@ -64,8 +65,9 @@ export class ProJobIvoireScraper {
         url: match[1],
         title: match[2].trim(),
         location: match[3].trim(),
-        postedDate: match[4].trim(),
-        closingDate: match[5]?.trim(),
+        company: match[4].trim(),
+        postedDate: match[5].trim(),
+        closingDate: match[6]?.trim(),
       })
     }
 
@@ -75,6 +77,8 @@ export class ProJobIvoireScraper {
   private mapToJobAd(job: ProJobIvoireJob): JobAd {
     const jobData: JobAdData = {
       title: job.title,
+      company: job.company,
+      location: job.location,
       url: job.url,
       postedDate: this.parseDate(job.postedDate) || new Date(),
       source: 'ProJobIvoire',
