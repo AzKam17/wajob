@@ -1,6 +1,8 @@
 import puppeteer from 'puppeteer'
 import { puppeteerConfig } from '@config/infra/puppeteer'
 import { JobAd, type JobAdData } from '@models/JobAd'
+import { JobAdRepository } from '../db/repositories/JobAdRepository'
+import { Logger } from '@/utils/logger'
 
 interface ScrapedJob {
   title: string
@@ -8,10 +10,13 @@ interface ScrapedJob {
   code: string
   dateEdition: string
   dateLimite: string
+  location: string
+  company: string
 }
 
 export class EduCarriereScraper {
   private readonly baseUrl = 'https://emploi.educarriere.ci'
+  private readonly jobAdRepository = new JobAdRepository()
 
   async scrape(pageNumber: number = 1): Promise<JobAd[]> {
     const browser = await puppeteer.launch(puppeteerConfig)
@@ -25,45 +30,91 @@ export class EduCarriereScraper {
 
       await page.goto(url, { waitUntil: 'networkidle0' })
 
-      const jobs = await page.evaluate(() => {
+      const jobUrls = await page.evaluate(() => {
         const jobElements = document.querySelectorAll('.rt-post.post-md.style-8')
-        const scrapedJobs: ScrapedJob[] = []
+        const urls: string[] = []
 
         jobElements.forEach(element => {
           const titleElement = element.querySelector('.post-title a')
-          const metaItems = element.querySelectorAll('.rt-meta ul li')
-
-          let code = ''
-          let dateEdition = ''
-          let dateLimite = ''
-
-          metaItems.forEach(item => {
-            const text = item.textContent || ''
-            if (text.includes('Code:')) {
-              const codeSpan = item.querySelector('span')
-              code = codeSpan?.textContent?.trim() || ''
-            } else if (text.includes("Date d'édition:")) {
-              const dateSpan = item.querySelector('span')
-              dateEdition = dateSpan?.textContent?.trim() || ''
-            } else if (text.includes('Date limite:')) {
-              const dateSpan = item.querySelector('span')
-              dateLimite = dateSpan?.textContent?.trim() || ''
-            }
-          })
-
           if (titleElement) {
-            scrapedJobs.push({
-              title: titleElement.textContent?.trim() || '',
-              url: (titleElement as HTMLAnchorElement).href,
-              code,
-              dateEdition,
-              dateLimite,
-            })
+            urls.push((titleElement as HTMLAnchorElement).href)
           }
         })
 
-        return scrapedJobs
+        return urls
       })
+
+      // Get existing URLs from database to avoid re-scraping
+      const existingJobs = await this.jobAdRepository.findBySource('EduCarriere')
+      const existingUrls = new Set(existingJobs.map(job => job.url))
+
+      // Filter out already scraped URLs
+      const newJobUrls = jobUrls.filter(url => !existingUrls.has(url))
+
+      Logger.info(`Found ${jobUrls.length} total jobs, ${newJobUrls.length} new jobs to scrape`)
+
+      const jobs: ScrapedJob[] = []
+
+      // Visit each job detail page to extract additional information
+      for (const jobUrl of newJobUrls) {
+        try {
+          await page.goto(jobUrl, { waitUntil: 'networkidle0' })
+
+          const jobDetails = await page.evaluate(() => {
+            // Extract title from h2.title
+            const titleElement = document.querySelector('h2.title')
+            const title = titleElement?.textContent?.trim() || ''
+
+            // Extract company from meta tag
+            const ogTitleMeta = document.querySelector('meta[property="og:title"]')
+            const ogTitle = ogTitleMeta?.getAttribute('content') || ''
+            let company = ''
+            if (ogTitle.includes(' recrute ')) {
+              const parts = ogTitle.split(' recrute ')
+              company = parts[0].trim()
+            }
+
+            // Extract location and dates from list
+            const listItems = document.querySelectorAll('#myList .list-group-item')
+            let location = ''
+            let dateEdition = ''
+            let dateLimite = ''
+
+            listItems.forEach(item => {
+              const text = item.textContent || ''
+              if (text.includes('Lieu:')) {
+                location = text.replace('Lieu:', '').trim()
+              } else if (text.includes('Date de publication:')) {
+                const dateSpan = item.querySelector('span')
+                dateEdition = dateSpan?.textContent?.trim() || ''
+              } else if (text.includes('Date limite:')) {
+                const dateSpan = item.querySelector('span')
+                dateLimite = dateSpan?.textContent?.trim() || ''
+              }
+            })
+
+            return {
+              title,
+              company,
+              location,
+              dateEdition,
+              dateLimite,
+            }
+          })
+
+          jobs.push({
+            title: jobDetails.title,
+            url: jobUrl,
+            code: '',
+            dateEdition: jobDetails.dateEdition,
+            dateLimite: jobDetails.dateLimite,
+            location: jobDetails.location,
+            company: jobDetails.company,
+          })
+        } catch (error) {
+          Logger.error(`Error scraping job detail page ${jobUrl}:`, error)
+        }
+      }
 
       const jobAds = jobs.map(job => this.mapToJobAd(job))
 
@@ -78,6 +129,8 @@ export class EduCarriereScraper {
 
     const jobData: JobAdData = {
       title: job.title,
+      company: job.company,
+      location: job.location,
       url: job.url,
       postedDate: postedDate || new Date(),
       source: 'EduCarriere',
