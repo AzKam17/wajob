@@ -16,13 +16,13 @@ try {
     process.exit(0)
   }
 
-  console.log(`📊 Found ${totalJobs} job ads to delete`)
+  console.log(`📊 Found ${totalJobs} job ads to delete (hard delete)`)
 
   for (const job of allJobs) {
-    await jobAdRepo.delete(job.id!)
+    await jobAdRepo.hardDelete(job.id!)
   }
 
-  console.log(`\n✅ Successfully deleted ${totalJobs} job ads!`)
+  console.log(`\n✅ Successfully hard deleted ${totalJobs} job ads!`)
 } catch (error) {
   console.error('❌ Error clearing job ads:', error)
   process.exit(1)
