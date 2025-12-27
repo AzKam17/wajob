@@ -5,6 +5,8 @@ import { ScraperSourceEntity } from './entities/ScraperSourceEntity'
 import { ScrapeSessionEntity } from './entities/ScrapeSessionEntity'
 import { BotUserEntity } from './entities/BotUserEntity'
 import { PersonalizedLinkEntity } from './entities/PersonalizedLinkEntity'
+import { ConversationEntity } from './entities/ConversationEntity'
+import { MessageEntity } from './entities/MessageEntity'
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
@@ -15,7 +17,15 @@ export const AppDataSource = new DataSource({
   database: process.env.DB_NAME || 'wajobs',
   synchronize: true, // Auto-migration enabled
   logging: false,
-  entities: [JobAdEntity, ScraperSourceEntity, ScrapeSessionEntity, BotUserEntity, PersonalizedLinkEntity],
+  entities: [
+    JobAdEntity,
+    ScraperSourceEntity,
+    ScrapeSessionEntity,
+    BotUserEntity,
+    PersonalizedLinkEntity,
+    ConversationEntity,
+    MessageEntity,
+  ],
   migrations: [],
   subscribers: [],
 })

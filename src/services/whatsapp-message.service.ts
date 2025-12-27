@@ -3,6 +3,8 @@ import { BotUserRepository } from '../db/repositories/BotUserRepository'
 import { BotMessages } from './bot-messages.service'
 import { JobSearchService } from './job-search.service'
 import { Logger } from '../utils/logger'
+import { ConversationStateService } from './conversation-state.service'
+import { ChatHistoryService } from './chat-history.service'
 
 export class WhatsAppMessageService {
   private botMessages = new BotMessages()
@@ -12,6 +14,11 @@ export class WhatsAppMessageService {
   // Track processed message IDs to prevent duplicate processing
   private processedMessages = new Set<string>()
   private readonly MAX_PROCESSED_CACHE = 1000
+
+  constructor(
+    private readonly conversationState: ConversationStateService,
+    private readonly chatHistory: ChatHistoryService
+  ) {}
 
   async handleIncomingMessage(payload: WhatsAppWebhookPayload): Promise<void> {
     try {
@@ -70,96 +77,115 @@ export class WhatsAppMessageService {
             // Send typing indicator (also marks as read automatically)
             await this.botMessages.sendTypingIndicator(messageId)
 
-            // Ice breaker messages (configured in setup-ice-breakers.ts)
-            const ICE_BREAKER_MESSAGES = [
-              'Je cherche un emploi.',
-              'Hello, montre moi ce que tu sais faire.'
-            ]
-
             const messageText = message.text.body.trim()
-            const isIceBreaker = ICE_BREAKER_MESSAGES.includes(messageText)
             const isSeeMore = messageText.toLowerCase() === 'voir plus'
+
+            // Get session ID for chat history
+            const sessionId = await this.conversationState.getSessionId(from)
+
+            // Handle message through XState machine
+            const { state, context, shouldSendWelcome } = await this.conversationState.handleMessage(
+              from,
+              messageText
+            )
+
+            Logger.info('Conversation state after message', {
+              from,
+              state,
+              context,
+              shouldSendWelcome,
+            })
+
+            // Save incoming message to chat history
+            await this.chatHistory.saveIncomingMessage(from, sessionId, messageText, state)
 
             // Check if this is the first message from this user
             const existingUser = await this.botUserRepo.findByPhoneNumber(from)
 
-            // Calculate time thresholds
-            const now = Date.now()
-            const twoMinutesAgo = new Date(now - 2 * 60 * 1000)
-            const tenMinutesAgo = new Date(now - 10 * 60 * 1000)
-
-            const lastMessageTime = existingUser?.lastMessageAt ? new Date(existingUser.lastMessageAt) : null
-
-            // Determine conversation state
-            const isNewUser = !existingUser
-            const isStaleConversation = lastMessageTime && lastMessageTime < tenMinutesAgo
-            const isModeratelyStale = lastMessageTime && lastMessageTime < twoMinutesAgo && lastMessageTime >= tenMinutesAgo
-
-            // Send welcome message if:
-            // 1. First time user (no existing user)
-            // 2. Ice breaker clicked
-            // 3. Last message is older than 10 minutes
-            if (isNewUser || isIceBreaker || isStaleConversation) {
-              Logger.info('Sending welcome flow', {
-                from,
-                reason: !existingUser ? 'new_user' : isIceBreaker ? 'ice_breaker' : 'stale_conversation'
+            // Create user if doesn't exist
+            if (!existingUser) {
+              await this.botUserRepo.create({
+                phoneNumber: from,
+                preferences: {},
+                lastMessageAt: new Date(),
               })
+            } else {
+              // Update last message time
+              await this.botUserRepo.update(existingUser.id, {
+                lastMessageAt: new Date(),
+              })
+            }
 
-              // Create user if doesn't exist
-              if (!existingUser) {
-                await this.botUserRepo.create({
-                  phoneNumber: from,
-                  preferences: {},
-                  lastMessageAt: new Date(),
-                })
-              } else {
-                // Update last message time
-                await this.botUserRepo.update(existingUser.id, {
-                  lastMessageAt: new Date(),
-                })
-              }
+            // Handle state transitions
+            if (shouldSendWelcome) {
+              Logger.info('Sending welcome flow', { from, state })
 
               // Send welcome flow (template + follow-up text after 2 seconds)
               await this.botMessages.sendWelcomeFlow(from)
 
+              // Save outgoing messages to chat history
+              await this.chatHistory.saveOutgoingTemplateMessage(
+                from,
+                sessionId,
+                'eska_job_title_prompt',
+                'welcomed'
+              )
+
+              // Mark welcome as sent in state machine
+              await this.conversationState.markWelcomeSent(from)
+
+              // Update conversation metadata
+              await this.chatHistory.updateConversationMetadata(from, { welcomeSent: true })
+
               Logger.success('Welcome flow sent successfully', { to: from })
-            } else if (isModeratelyStale) {
-              // Last message is 2-10 minutes old - ask user to re-enter job title
-              Logger.info('Sending re-enter job title prompt', {
+            } else if (state === 'awaitingJobTitle' && !shouldSendWelcome) {
+              // User is in awaiting state but we didn't just send welcome
+              // This means they sent a message after welcome or in a moderately stale conversation
+              const lastMessageTime = existingUser?.lastMessageAt
+                ? new Date(existingUser.lastMessageAt)
+                : null
+              const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000)
+              const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000)
+
+              const isModeratelyStale =
+                lastMessageTime &&
+                lastMessageTime < twoMinutesAgo &&
+                lastMessageTime >= tenMinutesAgo
+
+              if (isModeratelyStale) {
+                Logger.info('Sending re-enter job title prompt', {
+                  from,
+                  reason: 'moderately_stale_conversation',
+                })
+
+                // Send re-enter prompt
+                await this.botMessages.sendReenterJobTitlePrompt(from)
+
+                // Save to chat history
+                await this.chatHistory.saveOutgoingTextMessage(
+                  from,
+                  sessionId,
+                  'Re-enter job title prompt',
+                  state
+                )
+
+                Logger.success('Re-enter prompt sent successfully', { to: from })
+              }
+            } else if (state === 'searchingJobs' || state === 'displayingResults' || state === 'browsing') {
+              // Process job search
+              Logger.info('Processing job search', {
                 from,
-                userId: existingUser.id,
-                reason: 'moderately_stale_conversation'
-              })
-
-              // Update last message time
-              await this.botUserRepo.update(existingUser.id, {
-                lastMessageAt: new Date(),
-              })
-
-              // Send re-enter prompt
-              await this.botMessages.sendReenterJobTitlePrompt(from)
-
-              Logger.success('Re-enter prompt sent successfully', { to: from })
-            } else {
-              // Existing user with recent conversation (< 2 minutes) - process job search
-              Logger.info('Message from existing user', {
-                from,
-                userId: existingUser.id,
-                messageText: message.text.body
-              })
-
-              // Update last message time
-              await this.botUserRepo.update(existingUser.id, {
-                lastMessageAt: new Date(),
+                state,
+                messageText: message.text.body,
               })
 
               let userQuery: string
               let offset: number = 0
 
               if (isSeeMore) {
-                // User wants to see more results - use stored query and increment offset
-                const lastQuery = existingUser.preferences?.lastQuery as string
-                const lastOffset = (existingUser.preferences?.lastOffset as number) || 0
+                // User wants to see more results - use stored query from context
+                const lastQuery = context.lastQuery
+                const lastOffset = context.lastOffset || 0
 
                 if (!lastQuery) {
                   // No previous query stored - ask them to search first
@@ -167,11 +193,24 @@ export class WhatsAppMessageService {
                     from,
                     "Veuillez d'abord effectuer une recherche en m'indiquant le poste que vous recherchez! 💼"
                   )
+
+                  // Save to chat history
+                  await this.chatHistory.saveOutgoingTextMessage(
+                    from,
+                    sessionId,
+                    "Veuillez d'abord effectuer une recherche...",
+                    state
+                  )
+
                   continue
                 }
 
                 userQuery = lastQuery
                 offset = lastOffset + 3 // Next page
+
+                // Update state machine with new offset
+                await this.conversationState.markPaginationRequested(from, offset)
+
                 Logger.info('Loading more results', { from, query: userQuery, offset })
               } else {
                 // New search query
@@ -188,33 +227,54 @@ export class WhatsAppMessageService {
                 query: userQuery,
                 offset,
                 count: jobs.length,
-                jobs: jobs.map(j => ({ title: j.title, linkId: j.linkId }))
+                jobs: jobs.map((j) => ({ title: j.title, linkId: j.linkId })),
               })
 
               if (jobs.length > 0) {
                 // Found exact matches - send them
                 await this.botMessages.sendMultipleJobOffers(from, jobs)
 
-                // Send "see more" prompt after 10 seconds
+                // Save to chat history
+                await this.chatHistory.saveOutgoingInteractiveMessage(
+                  from,
+                  sessionId,
+                  'Job offers',
+                  jobs.map((j) => j.title),
+                  state,
+                  jobs.length
+                )
+
+                // Update state machine with search completion
+                await this.conversationState.markSearchCompleted(from, userQuery, offset)
+
+                // Update conversation metadata - increment search count and job offers shown
+                const conversation = await this.chatHistory.updateConversationMetadata(from, {
+                  jobOffersShownCount: jobs.length,
+                })
+
+                // Send "see more" prompt after 15 seconds
                 setTimeout(() => {
                   this.botMessages.sendSeeMorePrompt(from)
                 }, 15_000)
 
-                // Store query and offset for pagination
+                // Store query and offset for pagination in database (backwards compatibility)
                 await this.botUserRepo.update(existingUser.id, {
                   preferences: {
                     ...existingUser.preferences,
                     lastQuery: userQuery,
                     lastOffset: offset,
-                  }
+                  },
                 })
               } else {
                 if (offset > 0) {
                   // No more results available
-                  await this.botMessages.sendTextMessage(
-                    from,
+                  const noMoreMessage =
                     "Il n'y a plus d'offres disponibles pour cette recherche. 😔\n\nVous pouvez effectuer une nouvelle recherche! 🔍"
-                  )
+
+                  await this.botMessages.sendTextMessage(from, noMoreMessage)
+
+                  // Save to chat history
+                  await this.chatHistory.saveOutgoingTextMessage(from, sessionId, noMoreMessage, state)
                 } else {
                   // No exact matches on first page - try similar jobs
                   const similarJobs = await this.jobSearch.searchSimilarJobs(userQuery, from, 0)
@@ -224,7 +284,20 @@ export class WhatsAppMessageService {
                     await this.botMessages.sendNoExactMatchMessage(from)
                     await this.botMessages.sendMultipleJobOffers(from, similarJobs)
 
-                    // Send "see more" prompt after 10 seconds
+                    // Save to chat history
+                    await this.chatHistory.saveOutgoingInteractiveMessage(
+                      from,
+                      sessionId,
+                      'Similar job offers',
+                      similarJobs.map((j) => j.title),
+                      state,
+                      similarJobs.length
+                    )
+
+                    // Update state machine
+                    await this.conversationState.markSearchCompleted(from, userQuery, 0)
+
+                    // Send "see more" prompt after 15 seconds
                     setTimeout(() => {
                       this.botMessages.sendSeeMorePrompt(from)
                     }, 15_000)
@@ -235,11 +308,19 @@ export class WhatsAppMessageService {
                         ...existingUser.preferences,
                         lastQuery: userQuery,
                         lastOffset: 0,
-                      }
+                      },
                     })
                   } else {
                     // No jobs at all
                     await this.botMessages.sendNoJobsFoundMessage(from, userQuery)
+
+                    // Save to chat history
+                    await this.chatHistory.saveOutgoingTextMessage(
+                      from,
+                      sessionId,
+                      `No jobs found for: ${userQuery}`,
+                      state
+                    )
                   }
                 }
               }

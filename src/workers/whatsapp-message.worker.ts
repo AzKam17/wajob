@@ -3,8 +3,12 @@ import { getRedisConnection } from '@config/redis'
 import { WhatsAppMessageJobData } from '../queues/whatsapp-message.queue'
 import { Logger } from '../utils/logger'
 import { WhatsAppMessageService } from '../services/whatsapp-message.service'
+import { ConversationStateService } from '../services/conversation-state.service'
+import { ChatHistoryService } from '../services/chat-history.service'
 
 let whatsappMessageWorker: Worker<WhatsAppMessageJobData> | null = null
+let conversationStateService: ConversationStateService | null = null
+let chatHistoryService: ChatHistoryService | null = null
 
 async function processWhatsAppMessage(job: Job<WhatsAppMessageJobData>): Promise<void> {
   const { payload, receivedAt } = job.data
@@ -14,7 +18,18 @@ async function processWhatsAppMessage(job: Job<WhatsAppMessageJobData>): Promise
     receivedAt,
   })
 
-  const whatsappService = new WhatsAppMessageService()
+  // Create services if they don't exist (singleton pattern)
+  if (!conversationStateService || !chatHistoryService) {
+    const redis = getRedisConnection(
+      process.env.REDIS_HOST || 'localhost',
+      parseInt(process.env.REDIS_PORT || '6379'),
+      process.env.REDIS_PASSWORD
+    )
+    conversationStateService = new ConversationStateService(redis)
+    chatHistoryService = new ChatHistoryService(redis)
+  }
+
+  const whatsappService = new WhatsAppMessageService(conversationStateService, chatHistoryService)
 
   try {
     await whatsappService.handleIncomingMessage(payload)

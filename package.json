@@ -19,15 +19,19 @@
     "@microfox/whatsapp-business": "^1.5.2",
     "@yolk-oss/elysia-env": "^3.0.0",
     "bullmq": "^5.66.2",
+    "date-fns": "^4.1.0",
     "elysia": "latest",
     "ioredis": "^5.8.2",
     "pg": "^8.16.3",
     "puppeteer": "^24.34.0",
     "reflect-metadata": "^0.2.2",
     "sqlite3": "^5.1.7",
-    "typeorm": "^0.3.28"
+    "typeorm": "^0.3.28",
+    "xstate": "^5.25.0",
+    "zod": "^4.2.1"
   },
   "devDependencies": {
+    "@xstate/inspect": "^0.8.0",
     "bun-types": "latest",
     "playwright": "^1.57.0"
   },

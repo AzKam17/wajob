@@ -6,13 +6,28 @@ import { ScraperSourceRepository } from './db/repositories/ScraperSourceReposito
 import { PersonalizedLinkRepository } from './db/repositories/PersonalizedLinkRepository'
 import { BotUserRepository } from './db/repositories/BotUserRepository'
 import { WhatsAppMessageService } from './services/whatsapp-message.service'
+import { ConversationStateService } from './services/conversation-state.service'
+import { ChatHistoryService } from './services/chat-history.service'
 import { ScrapeSchedulerService } from './services/scrape-scheduler.service'
 import { getWhatsAppMessageQueue, closeWhatsAppMessageQueue } from './queues/whatsapp-message.queue'
+import { getRedisConnection } from '@config/redis'
 import { Logger } from './utils/logger'
 
 // Initialize database
 await initializeDatabase()
 Logger.success('Database initialized')
+
+// Initialize Redis connection for services
+const redis = getRedisConnection(
+  process.env.REDIS_HOST || 'localhost',
+  parseInt(process.env.REDIS_PORT || '6379'),
+  process.env.REDIS_PASSWORD
+)
+
+// Initialize conversation services
+const conversationStateService = new ConversationStateService(redis)
+const chatHistoryService = new ChatHistoryService(redis)
+Logger.success('Conversation services initialized')
 
 // Initialize WhatsApp message queue
 const whatsappQueue = getWhatsAppMessageQueue(
@@ -100,7 +115,7 @@ const app = new Elysia()
     }
   })
   .get('/webhook/whatsapp', async ({ query, set }) => {
-    const whatsappService = new WhatsAppMessageService()
+    const whatsappService = new WhatsAppMessageService(conversationStateService, chatHistoryService)
     const mode = query['hub.mode']
     const token = query['hub.verify_token']
     const challenge = query['hub.challenge']
@@ -168,6 +183,78 @@ const app = new Elysia()
       Logger.error('Error triggering scrape', { error })
       set.status = 500
       return { error: 'Failed to trigger scraping tasks' }
+    }
+  })
+  .get('/api/conversations/:phoneNumber', async ({ params, query, set }) => {
+    try {
+      const { phoneNumber } = params
+      const limit = parseInt((query.limit as string) || '20')
+      const offset = parseInt((query.offset as string) || '0')
+
+      const conversations = await chatHistoryService.getUserConversations(phoneNumber, limit, offset)
+
+      return {
+        phoneNumber,
+        conversations,
+        limit,
+        offset,
+      }
+    } catch (error) {
+      Logger.error('Error fetching conversations', { error })
+      set.status = 500
+      return { error: 'Failed to fetch conversations' }
+    }
+  })
+  .get('/api/conversations/:phoneNumber/:conversationId', async ({ params, set }) => {
+    try {
+      const { conversationId } = params
+
+      const conversation = await chatHistoryService.getConversationFromDatabase(conversationId)
+
+      if (!conversation) {
+        set.status = 404
+        return { error: 'Conversation not found' }
+      }
+
+      return conversation
+    } catch (error) {
+      Logger.error('Error fetching conversation', { error })
+      set.status = 500
+      return { error: 'Failed to fetch conversation' }
+    }
+  })
+  .get('/api/conversations/:phoneNumber/stats', async ({ params, set }) => {
+    try {
+      const { phoneNumber } = params
+
+      const stats = await chatHistoryService.getConversationStats(phoneNumber)
+
+      return {
+        phoneNumber,
+        stats,
+      }
+    } catch (error) {
+      Logger.error('Error fetching conversation stats', { error })
+      set.status = 500
+      return { error: 'Failed to fetch conversation stats' }
+    }
+  })
+  .get('/api/messages/:phoneNumber', async ({ params, query, set }) => {
+    try {
+      const { phoneNumber } = params
+      const limit = parseInt((query.limit as string) || '50')
+
+      const messages = await chatHistoryService.getHistoryFromDatabase(phoneNumber, limit)
+
+      return {
+        phoneNumber,
+        messages,
+        count: messages.length,
+      }
+    } catch (error) {
+      Logger.error('Error fetching messages', { error })
+      set.status = 500
+      return { error: 'Failed to fetch messages' }
     }
   })
   .get('/:id', async ({ params: { id }, request, set }) => {
