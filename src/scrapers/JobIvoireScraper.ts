@@ -55,6 +55,7 @@ export class JobIvoireScraper {
   private mapToJobAd(job: ScrapedJob): JobAd {
     const jobData: JobAdData = {
       title: job.title,
+      location: job.location,
       url: job.url,
       postedDate: new Date(),
       source: 'JobIvoire',
