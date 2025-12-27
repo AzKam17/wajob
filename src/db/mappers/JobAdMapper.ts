@@ -7,6 +7,9 @@ class JobAdMapperClass extends BaseMapper<JobAd, JobAdEntity> {
     return {
       ...this.mapBaseToEntity(model),
       title: model.title,
+      company: model.company,
+      location: model.location,
+      description: model.description,
       url: model.url,
       postedDate: model.postedDate,
       source: model.source,
@@ -16,6 +19,9 @@ class JobAdMapperClass extends BaseMapper<JobAd, JobAdEntity> {
   toModel(entity: JobAdEntity): JobAd {
     const model = new JobAd({
       title: entity.title,
+      company: entity.company,
+      location: entity.location,
+      description: entity.description,
       url: entity.url,
       postedDate: entity.postedDate,
       source: entity.source,

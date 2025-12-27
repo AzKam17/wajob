@@ -14,7 +14,8 @@
     "seed": "bun run scripts/seed-scraper-sources.ts",
     "setup:ice-breakers": "bun run scripts/setup-ice-breakers.ts",
     "clear-jobs": "bun run scripts/clear-job-ads.ts",
-    "force-scrape": "bun run scripts/force-scrape.ts"
+    "force-scrape": "bun run scripts/force-scrape.ts",
+    "migrate-jobs": "bun run scripts/add-job-columns.ts"
   },
   "dependencies": {
     "@elysiajs/cron": "^1.4.1",
