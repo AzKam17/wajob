@@ -248,6 +248,7 @@ Mais voici quelques opportunités similaires qui pourraient vous intéresser �
 
   /**
    * Send "no jobs found" message (when there are truly no results)
+   * Random from 20 variants
    * @param phoneNumber - Recipient's phone number
    * @param searchTerm - What the user searched for
    */
@@ -256,16 +257,52 @@ Mais voici quelques opportunités similaires qui pourraient vous intéresser �
     searchTerm: string
   ): Promise<void> {
     try {
-      const message = `Désolé, je n'ai trouvé aucune offre pour "${searchTerm}" pour le moment 😔
+      const messages = [
+        `Aucune offre pour "${searchTerm}" pour le moment 😔\n\nEssayez un terme plus général! 💡`,
 
-Essayez avec:
-• Un terme plus général (ex: "Marketing" au lieu de "Marketing Digital Senior")
-• Des variantes du titre (ex: "Développeur" au lieu de "Dev")
-• D'autres mots-clés liés à votre domaine
+        `Désolé, rien trouvé pour "${searchTerm}" 🤷\n\nTentez avec un autre mot-clé? 🔍`,
 
-Vous pouvez aussi me dire simplement votre secteur d'activité et je vous montrerai ce qui est disponible! 💡`
+        `Pas d'offres "${searchTerm}" actuellement 😕\n\nEssayez une variante du titre! ✨`,
 
-      await this.sendTextMessage(phoneNumber, message)
+        `Rien pour "${searchTerm}" aujourd'hui 😔\n\nUn terme plus large pourrait aider! 💼`,
+
+        `Aucun résultat pour "${searchTerm}" 🙁\n\nReformulons ensemble? Quel est votre domaine? 🎯`,
+
+        `Malheureusement, rien pour "${searchTerm}" 😞\n\nEssayez différemment! Exemple: "Marketing" plutôt que "Marketing Digital Senior" 📝`,
+
+        `Pas de match pour "${searchTerm}" 🔍\n\nSimplifiez votre recherche pour plus de résultats! 🚀`,
+
+        `Rien trouvé pour "${searchTerm}" pour l'instant 😕\n\nUn mot-clé différent? 💭`,
+
+        `Désolé, zéro offre pour "${searchTerm}" 🤷‍♂️\n\nEssayez avec votre secteur d'activité! 🏢`,
+
+        `Aucune offre "${searchTerm}" disponible 😔\n\nReformulons? "Dev" → "Développeur" par exemple! 💡`,
+
+        `Oups, rien pour "${searchTerm}" 😅\n\nUn terme plus courant pourrait marcher! ⭐`,
+
+        `Pas d'opportunités "${searchTerm}" actuellement 😞\n\nTentez une autre formulation! 🔄`,
+
+        `Rien à afficher pour "${searchTerm}" 🙁\n\nDites-moi votre domaine, je vous aide! 🤝`,
+
+        `Aucun résultat "${searchTerm}" 😕\n\nSimplifiez! Ex: "Comptable" au lieu de "Comptable Senior Confirmé" 📊`,
+
+        `Pas de poste "${searchTerm}" pour le moment 😔\n\nEssayez autrement! 🎲`,
+
+        `Désolé, "${searchTerm}" ne donne rien 🤷\n\nUne autre approche? Votre métier? 💼`,
+
+        `Rien actuellement pour "${searchTerm}" 😞\n\nVariez les mots-clés! 🔑`,
+
+        `Aucune offre correspondante à "${searchTerm}" 😕\n\nGénéralisez votre recherche! 🌟`,
+
+        `Pas de résultat pour "${searchTerm}" 🙁\n\nReformulons ensemble? 💬`,
+
+        `Malheureusement rien pour "${searchTerm}" 😔\n\nDites-moi simplement votre secteur! 🎯`
+      ]
+
+      // Select a random message
+      const randomMessage = messages[Math.floor(Math.random() * messages.length)]
+
+      await this.sendTextMessage(phoneNumber, randomMessage)
 
       Logger.success('No jobs found message sent', { phoneNumber, searchTerm })
     } catch (error) {
