@@ -47,7 +47,10 @@ export class DjamoScraper {
         return scrapedJobs
       })
 
-      const jobAds = jobs.map(job => this.mapToJobAd(job))
+      // Filter only jobs from Abidjan
+      const abidjanJobs = jobs.filter(job => job.location.includes('Abidjan'))
+
+      const jobAds = abidjanJobs.map(job => this.mapToJobAd(job))
 
       return jobAds
     } finally {
@@ -64,6 +67,8 @@ export class DjamoScraper {
 
     const jobData: JobAdData = {
       title: titleWithFlag,
+      company: 'Djamo',
+      location: job.location,
       url: job.url,
       postedDate: new Date(),
       source: 'Djamo',
