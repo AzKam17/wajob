@@ -99,9 +99,36 @@ export class WhatsAppMessageService {
               type: message.type
             })
 
-            // Skip non-text messages
+            // Handle non-text messages (image, audio, video, etc.)
             if (message.type !== 'text') {
-              Logger.debug('Skipping non-text message', { type: message.type })
+              Logger.info('Received non-text message, sending unsupported media response', {
+                type: message.type,
+                from
+              })
+
+              // Send typing indicator first
+              await this.botMessages.sendTypingIndicator(messageId)
+
+              // Send unsupported media message
+              await this.botMessages.sendUnsupportedMediaMessage(from, message.type)
+
+              // Get session ID for chat history
+              const sessionId = await this.conversationState.getSessionId(from)
+
+              // Save to chat history
+              await this.chatHistory.saveIncomingMessage(
+                from,
+                sessionId,
+                `[${message.type} message - not supported]`,
+                'browsing'
+              )
+              await this.chatHistory.saveOutgoingTextMessage(
+                from,
+                sessionId,
+                'Unsupported media type response',
+                'browsing'
+              )
+
               continue
             }
 

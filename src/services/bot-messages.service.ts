@@ -313,4 +313,45 @@ Envoyez *Voir plus* pour afficher d'autres opportunités! 📋`
       throw error
     }
   }
+
+  /**
+   * Send unsupported media type message (random from 10 variants)
+   * @param phoneNumber - Recipient's phone number
+   * @param mediaType - Type of media that was sent (image, audio, video, etc.)
+   */
+  async sendUnsupportedMediaMessage(phoneNumber: string, mediaType: string): Promise<void> {
+    try {
+      const messages = [
+        `Désolé, je ne peux pas traiter les ${mediaType === 'image' ? 'images' : 'messages vocaux'} pour le moment 🙈\n\nPour rechercher des offres d'emploi, envoyez-moi simplement le titre du poste en texte! 💼`,
+
+        `Oups! Je ne suis pas encore capable de lire les ${mediaType === 'image' ? 'images' : 'messages vocaux'} 😅\n\nÉcrivez-moi le poste que vous recherchez et je vous aiderai! ✍️`,
+
+        `Je ne peux malheureusement pas analyser les ${mediaType === 'image' ? 'images' : 'vocaux'} 🤖\n\nMais je suis là pour vous aider! Tapez le titre du poste que vous cherchez 📝`,
+
+        `Ah, les ${mediaType === 'image' ? 'images' : 'messages vocaux'}... ce n'est pas mon fort! 🙊\n\nEnvoyez-moi plutôt votre recherche en texte et je trouverai des offres pour vous! 🔍`,
+
+        `Je ne suis pas équipé pour traiter les ${mediaType === 'image' ? 'images' : 'messages audio'} pour l'instant 🛠️\n\nDites-moi en texte le poste qui vous intéresse et c'est parti! 🚀`,
+
+        `Hmm, je préfère les messages texte! 💬\n\nLes ${mediaType === 'image' ? 'images' : 'vocaux'}, ce n'est pas encore dans mes capacités 😊\n\nQuel poste recherchez-vous?`,
+
+        `Mon système ne peut pas lire les ${mediaType === 'image' ? 'images' : 'messages vocaux'} actuellement 🤷\n\nMais écrivez-moi le titre du poste et je vous enverrai les meilleures offres! ⭐`,
+
+        `Oups! Les ${mediaType === 'image' ? 'images' : 'messages audio'} ne sont pas supportés pour le moment 🚫\n\nTapez simplement votre recherche (ex: "Développeur", "Comptable") et je m'occupe du reste! 💪`,
+
+        `Je ne peux pas traiter ce type de message 📵\n\nPour que je puisse vous aider, envoyez-moi un message texte avec le poste recherché!\n\nExemple: "Marketing Manager" 💼`,
+
+        `Les ${mediaType === 'image' ? 'images' : 'messages vocaux'}? Pas encore! 🙈\n\nMais je suis super efficace avec les messages texte! Dites-moi quel emploi vous cherchez 🎯`
+      ]
+
+      // Select a random message
+      const randomMessage = messages[Math.floor(Math.random() * messages.length)]
+
+      await this.sendTextMessage(phoneNumber, randomMessage)
+
+      Logger.success('Unsupported media message sent', { phoneNumber, mediaType })
+    } catch (error) {
+      Logger.error('Error sending unsupported media message', { error, phoneNumber })
+      throw error
+    }
+  }
 }
