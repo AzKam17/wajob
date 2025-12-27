@@ -1,9 +1,10 @@
+import { AppDataSource } from '../data-source'
 import { ConversationEntity } from '../entities/ConversationEntity'
 import { BaseRepository } from './BaseRepository'
 
 export class ConversationRepository extends BaseRepository<ConversationEntity> {
   constructor() {
-    super(ConversationEntity)
+    super(AppDataSource.getRepository(ConversationEntity))
   }
 
   async findByPhoneNumber(phoneNumber: string, limit = 20, offset = 0) {

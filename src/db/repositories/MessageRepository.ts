@@ -1,9 +1,10 @@
+import { AppDataSource } from '../data-source'
 import { MessageEntity } from '../entities/MessageEntity'
 import { BaseRepository } from './BaseRepository'
 
 export class MessageRepository extends BaseRepository<MessageEntity> {
   constructor() {
-    super(MessageEntity)
+    super(AppDataSource.getRepository(MessageEntity))
   }
 
   async findByConversationId(conversationId: string, limit = 100, offset = 0) {
