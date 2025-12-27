@@ -6,6 +6,7 @@ interface ScrapedJob {
   title: string
   url: string
   location: string
+  company: string
 }
 
 export class OptionCarriereScraper {
@@ -31,6 +32,7 @@ export class OptionCarriereScraper {
         jobElements.forEach(element => {
           const titleElement = element.querySelector('header h2 a')
           const locationElement = element.querySelector('.location li')
+          const companyElement = element.querySelector('.company a')
 
           if (titleElement) {
             const url = (titleElement as HTMLAnchorElement).href
@@ -42,6 +44,7 @@ export class OptionCarriereScraper {
               title: titleElement.textContent?.trim() || '',
               url: fullUrl,
               location: locationElement?.textContent?.trim() || '',
+              company: companyElement?.textContent?.trim() || '',
             })
           }
         })
@@ -60,6 +63,8 @@ export class OptionCarriereScraper {
   private mapToJobAd(job: ScrapedJob): JobAd {
     const jobData: JobAdData = {
       title: job.title,
+      company: job.company,
+      location: job.location,
       url: job.url,
       postedDate: new Date(),
       source: 'OptionCarriere',
