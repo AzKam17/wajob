@@ -485,7 +485,7 @@ export class WhatsAppMessageService {
       }
     } else {
       // No jobs at all
-      await this.botMessages.sendNoJobsFoundMessage(ctx.from, userQuery)
+      await this.botMessages.sendNoJobsFoundMessage(ctx.from, userQuery, ctx.contactName)
       await this.chatHistory.saveOutgoingTextMessage(
         ctx.from,
         ctx.sessionId,
