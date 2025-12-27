@@ -11,12 +11,13 @@ export class BotMessages {
   /**
    * Send welcome flow: Direct welcome message
    * @param phoneNumber - Recipient's phone number
+   * @param contactName - User's name from WhatsApp profile
    */
-  async sendWelcomeFlow(phoneNumber: string): Promise<void> {
+  async sendWelcomeFlow(phoneNumber: string, contactName: string = 'User'): Promise<void> {
     try {
-      Logger.info('Sending welcome flow', { phoneNumber })
+      Logger.info('Sending welcome flow', { phoneNumber, contactName })
 
-      const welcomeMessage = 'Bonjour! 👋 Je suis Eska 🤖, votre assistant emploi!\n\nDites-moi le poste que vous cherchez et je vous trouve des offres 💼✨'
+      const welcomeMessage = `Bonjour ${contactName}! 👋 Je suis Eska 🤖, votre assistant emploi!\n\nDites-moi le poste que vous cherchez et je vous trouve des offres 💼✨`
 
       await this.whatsapp.sendTextMessage(
         phoneNumber,
@@ -27,7 +28,7 @@ export class BotMessages {
         }
       )
 
-      Logger.success('Welcome flow completed', { phoneNumber })
+      Logger.success('Welcome flow completed', { phoneNumber, contactName })
     } catch (error) {
       Logger.error('Error sending welcome flow', { error, phoneNumber })
       throw error

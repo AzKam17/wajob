@@ -17,6 +17,7 @@ interface MessageContext {
   context: any
   shouldSendWelcome: boolean
   existingUser: any
+  contactName: string
 }
 
 /**
@@ -184,6 +185,7 @@ export class WhatsAppMessageService {
                 context,
                 shouldSendWelcome,
                 existingUser,
+                contactName,
               })
             } else {
               Logger.warn('No handler found for state', { state, from })
@@ -311,9 +313,9 @@ export class WhatsAppMessageService {
    * Send welcome flow to user
    */
   private async sendWelcomeFlow(ctx: MessageContext): Promise<void> {
-    Logger.info('Sending welcome flow', { from: ctx.from, state: ctx.state })
+    Logger.info('Sending welcome flow', { from: ctx.from, state: ctx.state, contactName: ctx.contactName })
 
-    await this.botMessages.sendWelcomeFlow(ctx.from)
+    await this.botMessages.sendWelcomeFlow(ctx.from, ctx.contactName)
     await this.chatHistory.saveOutgoingTemplateMessage(
       ctx.from,
       ctx.sessionId,
