@@ -4,6 +4,14 @@ interface SociumJobResult {
   slug: string
   title: string
   createdAt: string
+  city: string
+  jobCountry: {
+    code: string
+    name: string
+  }
+  companyDetails: {
+    name: string
+  }
 }
 
 interface SociumApiResponse {
@@ -48,7 +56,10 @@ export class SociumScraper {
     }
 
     const data: SociumApiResponse = await response.json()
-    const jobs = data.results.map(job => this.mapToJobAd(job))
+
+    // Filter only jobs from Côte d'Ivoire
+    const ivoryCoastJobs = data.results.filter(job => job.jobCountry.code === 'CI')
+    const jobs = ivoryCoastJobs.map(job => this.mapToJobAd(job))
 
     return jobs
   }
@@ -56,6 +67,8 @@ export class SociumScraper {
   private mapToJobAd(job: SociumJobResult): JobAd {
     const jobData: JobAdData = {
       title: job.title,
+      company: job.companyDetails.name,
+      location: job.city,
       url: `${this.baseUrl}/jobs/${job.slug}`,
       postedDate: new Date(job.createdAt),
       source: 'Socium',
