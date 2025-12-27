@@ -50,17 +50,28 @@ export class JobAdRepository extends BaseRepository<JobAdEntity> {
   }
 
   /**
-   * Search jobs using PostgreSQL full-text search
-   * Uses ILIKE for case-insensitive pattern matching
+   * Search jobs using PostgreSQL full-text search with French language support
+   * Uses ts_vector and ts_query for better search quality
    * @param query - Search query
    * @param limit - Maximum number of results (default: 3)
    * @param offset - Pagination offset (default: 0)
    */
   async searchByQuery(query: string, limit: number = 3, offset: number = 0): Promise<JobAd[]> {
+    // Prepare the query for ts_query (handle multiple words and French text)
+    const tsQuery = query.trim().split(/\s+/).join(' & ')
+
     const entities = await this.repository
       .createQueryBuilder('job')
       .where('job.deletedAt IS NULL')
-      .andWhere('(job.title ILIKE :query OR job.description ILIKE :query OR job.company ILIKE :query OR job.location ILIKE :query)', { query: `%${query}%` })
+      .andWhere(
+        `(
+          to_tsvector('french', COALESCE(job.title, '')) ||
+          to_tsvector('french', COALESCE(job.description, '')) ||
+          to_tsvector('french', COALESCE(job.company, '')) ||
+          to_tsvector('french', COALESCE(job.location, ''))
+        ) @@ to_tsquery('french', :tsQuery)`,
+        { tsQuery }
+      )
       .orderBy('job.postedDate', 'DESC')
       .skip(offset)
       .take(limit)
