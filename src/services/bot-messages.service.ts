@@ -9,33 +9,18 @@ export class BotMessages {
   private whatsapp = getWhatsAppClient()
 
   /**
-   * Send welcome flow: Template + follow-up text after 2 seconds
+   * Send welcome flow: Direct welcome message
    * @param phoneNumber - Recipient's phone number
    */
   async sendWelcomeFlow(phoneNumber: string): Promise<void> {
     try {
       Logger.info('Sending welcome flow', { phoneNumber })
 
-      // Step 1: Send the template message (required for opening conversation)
-      await this.whatsapp.sendTemplateMessage(
-        phoneNumber,
-        'eska_job_title_prompt',
-        'fr',
-        [], // No parameters
-        { recipientType: 'individual' }
-      )
-
-      Logger.success('Welcome template sent', { phoneNumber })
-
-      // Step 2: Wait 2 seconds before sending follow-up
-      await Bun.sleep(2000)
-
-      // Step 3: Send follow-up text message
-      const followUpMessage = 'Dites-moi simplement le titre du poste que vous recherchez (ex : Développeur web, Comptable, Community Manager), et je vous enverrai des offres récentes correspondant à votre recherche 📍💼'
+      const welcomeMessage = 'Bonjour! 👋 Je suis Eska 🤖, votre assistant emploi!\n\nDites-moi le poste que vous cherchez et je vous trouve des offres 💼✨'
 
       await this.whatsapp.sendTextMessage(
         phoneNumber,
-        followUpMessage,
+        welcomeMessage,
         {
           recipientType: 'individual',
           previewUrl: false
