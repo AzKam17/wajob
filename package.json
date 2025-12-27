@@ -12,7 +12,9 @@
     "prod:scraper-worker": "bun run src/workers/scraper-worker-standalone.ts",
     "prod:all-workers": "bun run src/workers/standalone-worker.ts",
     "seed": "bun run scripts/seed-scraper-sources.ts",
-    "setup:ice-breakers": "bun run scripts/setup-ice-breakers.ts"
+    "setup:ice-breakers": "bun run scripts/setup-ice-breakers.ts",
+    "clear-jobs": "bun run scripts/clear-job-ads.ts",
+    "force-scrape": "bun run scripts/force-scrape.ts"
   },
   "dependencies": {
     "@elysiajs/cron": "^1.4.1",
