@@ -19,6 +19,7 @@
     "create-indexes": "bun run scripts/create-indexes.ts"
   },
   "dependencies": {
+    "@elysiajs/cors": "^1.4.1",
     "@elysiajs/cron": "^1.4.1",
     "@microfox/whatsapp-business": "^1.5.2",
     "@yolk-oss/elysia-env": "^3.0.0",

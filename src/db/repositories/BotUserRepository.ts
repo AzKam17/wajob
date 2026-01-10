@@ -14,4 +14,30 @@ export class BotUserRepository extends BaseRepository<BotUserEntity> {
   async updateLastMessageTime(id: string): Promise<BotUserEntity | null> {
     return await this.update(id, { lastMessageAt: new Date() })
   }
+
+  async findAllPaginated(
+    page: number,
+    limit: number,
+    search?: string,
+    sortBy: string = 'createdAt',
+    sortOrder: 'ASC' | 'DESC' = 'DESC'
+  ): Promise<{ users: BotUserEntity[]; total: number }> {
+    const offset = (page - 1) * limit
+
+    const queryBuilder = this.repository
+      .createQueryBuilder('user')
+      .where('user.deletedAt IS NULL')
+
+    if (search) {
+      queryBuilder.andWhere('user.phoneNumber ILIKE :search', { search: `%${search}%` })
+    }
+
+    const [users, total] = await queryBuilder
+      .orderBy(`user.${sortBy}`, sortOrder)
+      .skip(offset)
+      .take(limit)
+      .getManyAndCount()
+
+    return { users, total }
+  }
 }

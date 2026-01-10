@@ -66,4 +66,21 @@ export class MessageRepository extends BaseRepository<MessageEntity> {
       .take(limit)
       .getMany()
   }
+
+  async countIncomingByPhoneNumber(phoneNumber: string): Promise<number> {
+    return this.repository
+      .createQueryBuilder('message')
+      .where('message.phoneNumber = :phoneNumber', { phoneNumber })
+      .andWhere('message.direction = :direction', { direction: 'incoming' })
+      .getCount()
+  }
+
+  async getFirstIncomingMessage(phoneNumber: string): Promise<MessageEntity | null> {
+    return this.repository
+      .createQueryBuilder('message')
+      .where('message.phoneNumber = :phoneNumber', { phoneNumber })
+      .andWhere('message.direction = :direction', { direction: 'incoming' })
+      .orderBy('message.timestamp', 'ASC')
+      .getOne()
+  }
 }

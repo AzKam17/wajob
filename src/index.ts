@@ -12,6 +12,7 @@ import { ScrapeSchedulerService } from './services/scrape-scheduler.service'
 import { getWhatsAppMessageQueue, closeWhatsAppMessageQueue } from './queues/whatsapp-message.queue'
 import { getRedisConnection } from '@config/redis'
 import { Logger } from './utils/logger'
+import { adminRoutes } from './admin'
 
 // Initialize database
 await initializeDatabase()
@@ -38,6 +39,7 @@ const whatsappQueue = getWhatsAppMessageQueue(
 
 const app = new Elysia()
   .use(env(envSchema))
+  .use(adminRoutes)
   .decorate('scraperSourceRepo', new ScraperSourceRepository())
   .onStart(async () => {
     Logger.info('Starting application')

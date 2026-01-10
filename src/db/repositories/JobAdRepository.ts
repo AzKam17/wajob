@@ -79,4 +79,36 @@ export class JobAdRepository extends BaseRepository<JobAdEntity> {
 
     return JobAdMapper.toModels(entities)
   }
+
+  /**
+   * Find all jobs with pagination, search, and sorting
+   */
+  async findAllPaginated(
+    page: number,
+    limit: number,
+    search?: string,
+    sortBy: string = 'postedDate',
+    sortOrder: 'ASC' | 'DESC' = 'DESC'
+  ): Promise<{ jobs: JobAdEntity[]; total: number }> {
+    const offset = (page - 1) * limit
+
+    const queryBuilder = this.repository
+      .createQueryBuilder('job')
+      .where('job.deletedAt IS NULL')
+
+    if (search) {
+      queryBuilder.andWhere(
+        '(job.title ILIKE :search OR job.company ILIKE :search OR job.location ILIKE :search OR job.description ILIKE :search)',
+        { search: `%${search}%` }
+      )
+    }
+
+    const [jobs, total] = await queryBuilder
+      .orderBy(`job.${sortBy}`, sortOrder)
+      .skip(offset)
+      .take(limit)
+      .getManyAndCount()
+
+    return { jobs, total }
+  }
 }

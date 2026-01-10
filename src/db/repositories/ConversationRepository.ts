@@ -97,4 +97,29 @@ export class ConversationRepository extends BaseRepository<ConversationEntity> {
       avgDuration: parseFloat(result.avgDuration) || 0,
     }
   }
+
+  async findAllPaginated(
+    page: number,
+    limit: number,
+    search?: string,
+    sortBy: string = 'lastActivityAt',
+    sortOrder: 'ASC' | 'DESC' = 'DESC'
+  ): Promise<{ conversations: ConversationEntity[]; total: number }> {
+    const offset = (page - 1) * limit
+    const queryBuilder = this.repository
+      .createQueryBuilder('conversation')
+      .where('conversation.deletedAt IS NULL')
+
+    if (search) {
+      queryBuilder.andWhere('conversation.phoneNumber ILIKE :search', { search: `%${search}%` })
+    }
+
+    const [conversations, total] = await queryBuilder
+      .orderBy(`conversation.${sortBy}`, sortOrder)
+      .skip(offset)
+      .take(limit)
+      .getManyAndCount()
+
+    return { conversations, total }
+  }
 }
