@@ -12,6 +12,12 @@ interface ScrapedJob {
   dateLimite: string
   location: string
   company: string
+  description?: string
+  pageMetadata?: {
+    keywords?: string
+    listItems?: string[]
+    [key: string]: any
+  }
 }
 
 export class EduCarriereScraper {
@@ -74,14 +80,25 @@ export class EduCarriereScraper {
               company = parts[0].trim()
             }
 
+            // Extract description from og:description meta tag
+            const ogDescriptionMeta = document.querySelector('meta[property="og:description"]')
+            const description = ogDescriptionMeta?.getAttribute('content') || ''
+
+            // Extract keywords from meta tag
+            const keywordsMeta = document.querySelector('meta[name="Keywords"]')
+            const keywords = keywordsMeta?.getAttribute('content') || ''
+
             // Extract location and dates from list
-            const listItems = document.querySelectorAll('#myList .list-group-item')
+            const listItems = document.querySelectorAll('li.list-group-item')
             let location = ''
             let dateEdition = ''
             let dateLimite = ''
+            const listItemsContent: string[] = []
 
             listItems.forEach(item => {
               const text = item.textContent || ''
+              listItemsContent.push(text.trim())
+
               if (text.includes('Lieu:')) {
                 location = text.replace('Lieu:', '').trim()
               } else if (text.includes('Date de publication:')) {
@@ -99,6 +116,11 @@ export class EduCarriereScraper {
               location,
               dateEdition,
               dateLimite,
+              description,
+              pageMetadata: {
+                keywords,
+                listItems: listItemsContent,
+              },
             }
           })
 
@@ -110,6 +132,8 @@ export class EduCarriereScraper {
             dateLimite: jobDetails.dateLimite,
             location: jobDetails.location,
             company: jobDetails.company,
+            description: jobDetails.description,
+            pageMetadata: jobDetails.pageMetadata,
           })
         } catch (error) {
           Logger.error(`Error scraping job detail page ${jobUrl}:`, error)
@@ -134,6 +158,8 @@ export class EduCarriereScraper {
       url: job.url,
       postedDate: postedDate || new Date(),
       source: 'EduCarriere',
+      description: job.description,
+      pageMetadata: job.pageMetadata,
     }
 
     return new JobAd(jobData)
