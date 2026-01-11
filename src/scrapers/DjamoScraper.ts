@@ -1,4 +1,4 @@
-import puppeteer from 'puppeteer'
+import puppeteer, { type Page } from 'puppeteer'
 import { puppeteerConfig } from '@config/infra/puppeteer'
 import { JobAd, type JobAdData } from '@models/JobAd'
 
@@ -65,7 +65,7 @@ export class DjamoScraper {
     }
   }
 
-  private async scrapeJobDetails(page: puppeteer.Page, url: string): Promise<JobDetails> {
+  private async scrapeJobDetails(page: Page, url: string): Promise<JobDetails> {
     await page.goto(url, { waitUntil: 'networkidle0' })
 
     const details = await page.evaluate(() => {

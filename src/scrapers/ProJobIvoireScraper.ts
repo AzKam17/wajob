@@ -1,3 +1,5 @@
+import puppeteer, { type Page } from 'puppeteer'
+import { puppeteerConfig } from '@config/infra/puppeteer'
 import { JobAd, type JobAdData } from '@models/JobAd'
 
 interface ProJobIvoireJob {
@@ -9,7 +11,12 @@ interface ProJobIvoireJob {
   closingDate?: string
 }
 
-// TODO: Unable to find in db jobs ads to review and also add description and metadata
+interface JobDetails {
+  description: string
+  pageMetadata: {
+    keywords?: string
+  }
+}
 export class ProJobIvoireScraper {
   private readonly apiUrl = 'https://projobivoire.com/wp-admin/admin-ajax.php'
 
@@ -50,7 +57,21 @@ export class ProJobIvoireScraper {
     const html = await response.text()
     const jobs = this.parseHtml(html)
 
-    return jobs.map(job => this.mapToJobAd(job))
+    // Fetch details for each job
+    const browser = await puppeteer.launch(puppeteerConfig)
+    const pageInstance = await browser.newPage()
+
+    try {
+      const jobAds: JobAd[] = []
+      for (const job of jobs) {
+        const details = await this.scrapeJobDetails(pageInstance, job.url)
+        jobAds.push(this.mapToJobAd(job, details))
+      }
+
+      return jobAds
+    } finally {
+      await browser.close()
+    }
   }
 
   private parseHtml(html: string): ProJobIvoireJob[] {
@@ -75,7 +96,28 @@ export class ProJobIvoireScraper {
     return jobs
   }
 
-  private mapToJobAd(job: ProJobIvoireJob): JobAd {
+  private async scrapeJobDetails(page: Page, url: string): Promise<JobDetails> {
+    await page.goto(url, { waitUntil: 'networkidle0' })
+
+    const details = await page.evaluate(() => {
+      const metaDescription = document.querySelector('meta[name="description"]')
+      const description = metaDescription?.getAttribute('content') || ''
+
+      const metaKeywords = document.querySelector('meta[name="keywords"]')
+      const keywords = metaKeywords?.getAttribute('content') || ''
+
+      return {
+        description,
+        pageMetadata: {
+          keywords,
+        },
+      }
+    })
+
+    return details
+  }
+
+  private mapToJobAd(job: ProJobIvoireJob, details?: JobDetails): JobAd {
     const jobData: JobAdData = {
       title: job.title,
       company: job.company,
@@ -83,6 +125,8 @@ export class ProJobIvoireScraper {
       url: job.url,
       postedDate: this.parseDate(job.postedDate) || new Date(),
       source: 'ProJobIvoire',
+      description: details?.description,
+      pageMetadata: details?.pageMetadata,
     }
 
     return new JobAd(jobData)
