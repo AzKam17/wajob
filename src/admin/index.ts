@@ -149,3 +149,34 @@ export const adminRoutes = new Elysia({ prefix: '/admin' })
       id: t.String(),
     }),
   })
+  .get('/stats', async ({ query }) => {
+    const messageRepo = new MessageRepository()
+    const userRepo = new BotUserRepository()
+    const linkRepo = new PersonalizedLinkRepository()
+
+    const startTime = parseInt(query.startTime || '0')
+    const endTime = parseInt(query.endTime || Date.now().toString())
+
+    // Get all stats in parallel with fallbacks
+    const [messagesPerBucket, newUsersPerBucket, returningUsersPerBucket, clicksPerBucket, deviceBreakdown] = await Promise.all([
+      messageRepo.getMessagesPerTimeBucket(startTime, endTime).catch(() => []),
+      userRepo.getNewUsersPerTimeBucket(startTime, endTime).catch(() => []),
+      userRepo.getReturningUsersPerTimeBucket(startTime, endTime).catch(() => []),
+      linkRepo.getClicksPerTimeBucket(startTime, endTime).catch(() => []),
+      linkRepo.getDeviceBreakdown(startTime, endTime).catch(() => []),
+    ])
+
+    return {
+      messagesPerBucket,
+      newUsersPerBucket,
+      returningUsersPerBucket,
+      clicksPerBucket,
+      deviceBreakdown,
+      timeRange: { startTime, endTime },
+    }
+  }, {
+    query: t.Object({
+      startTime: t.Optional(t.String()),
+      endTime: t.Optional(t.String()),
+    }),
+  })

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Briefcase, Users, MessageSquare } from 'lucide-react';
+import { Briefcase, Users, MessageSquare, BarChart3 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const menuItems = [
@@ -20,6 +20,11 @@ const menuItems = [
     name: 'Conversations',
     href: '/conversations',
     icon: MessageSquare,
+  },
+  {
+    name: 'Stats',
+    href: '/stats',
+    icon: BarChart3,
   },
 ];
 

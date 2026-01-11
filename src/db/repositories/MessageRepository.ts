@@ -83,4 +83,43 @@ export class MessageRepository extends BaseRepository<MessageEntity> {
       .orderBy('message.timestamp', 'ASC')
       .getOne()
   }
+
+  async getMessagesPerTimeBucket(startTime: number, endTime: number): Promise<Array<{ bucket: number; count: number }>> {
+    const bucketSize = this.calculateBucketSize(startTime, endTime)
+
+    try {
+      const results = await this.repository.query(`
+        SELECT
+          FLOOR(timestamp / $1) * $1 as bucket,
+          COUNT(*) as count
+        FROM messages
+        WHERE "deletedAt" IS NULL
+          AND timestamp >= $2
+          AND timestamp <= $3
+        GROUP BY bucket
+        ORDER BY bucket ASC
+      `, [bucketSize, startTime, endTime])
+
+      return results.map((r: any) => ({
+        bucket: parseInt(r.bucket),
+        count: parseInt(r.count),
+      }))
+    } catch {
+      return []
+    }
+  }
+
+  private calculateBucketSize(startTime: number, endTime: number): number {
+    const duration = endTime - startTime
+    const fifteenMin = 15 * 60 * 1000
+    const oneHour = 60 * 60 * 1000
+    const oneDay = 24 * 60 * 60 * 1000
+
+    if (duration <= fifteenMin) return 60 * 1000 // 1 minute buckets
+    if (duration <= oneHour) return 5 * 60 * 1000 // 5 minute buckets
+    if (duration <= 6 * oneHour) return 15 * 60 * 1000 // 15 minute buckets
+    if (duration <= oneDay) return oneHour // 1 hour buckets
+    if (duration <= 7 * oneDay) return 6 * oneHour // 6 hour buckets
+    return oneDay // 1 day buckets
+  }
 }

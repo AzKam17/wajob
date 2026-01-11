@@ -171,3 +171,25 @@ export async function fetchConversationMessages(conversationId: string): Promise
   }
   return response.json();
 }
+
+export interface StatsResponse {
+  messagesPerBucket: Array<{ bucket: number; count: number }>;
+  newUsersPerBucket: Array<{ bucket: number; count: number }>;
+  returningUsersPerBucket: Array<{ bucket: number; count: number }>;
+  clicksPerBucket: Array<{ bucket: number; count: number }>;
+  deviceBreakdown: Array<{ device: string; count: number }>;
+  timeRange: { startTime: number; endTime: number };
+}
+
+export async function fetchStats(startTime: number, endTime: number): Promise<StatsResponse> {
+  const params = new URLSearchParams({
+    startTime: startTime.toString(),
+    endTime: endTime.toString(),
+  });
+
+  const response = await fetch(`${API_URL}/admin/stats?${params}`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch stats');
+  }
+  return response.json();
+}
