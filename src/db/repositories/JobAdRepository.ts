@@ -26,7 +26,31 @@ export class JobAdRepository extends BaseRepository<JobAdEntity> {
   }
 
   // Model-based methods
-  async saveModel(model: JobAd): Promise<JobAd> {
+  async saveModel(model: JobAd): Promise<JobAd | null> {
+    // Check if a job with the same URL already exists
+    const existingJob = await this.findByUrl(model.url)
+
+    if (existingJob) {
+      const existingVersion = parseInt((existingJob.internalExtras as any)?.version || '0', 10)
+      const newVersion = parseInt((model.internalExtras as any)?.version || '0', 10)
+
+      // If new version is higher than existing version, update the job
+      if (newVersion > existingVersion) {
+        // Transform the title before saving
+        model.title = TitleTransformer.transformWithArticles(model.title)
+
+        const updatedEntity = await this.repository.save({
+          ...existingJob,
+          ...JobAdMapper.toEntity(model),
+          id: existingJob.id,
+        })
+        return JobAdMapper.toModel(updatedEntity)
+      }
+
+      // Otherwise, skip saving (same version or lower version)
+      return null
+    }
+
     // Transform the title before saving
     model.title = TitleTransformer.transformWithArticles(model.title)
 

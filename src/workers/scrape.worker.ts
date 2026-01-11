@@ -62,15 +62,13 @@ async function processScrapeJob(job: Job<ScrapeJobData>): Promise<void> {
 
       for (const jobAd of results) {
         try {
-          const existing = await jobRepo.findModelByUrl(jobAd.url)
-          if (existing) {
-            Logger.debug('Skipping duplicate job', { url: jobAd.url })
-            continue
+          const saved = await jobRepo.saveModel(jobAd)
+          if (saved) {
+            totalSaved++
+            Logger.success('Job saved', { url: jobAd.url, title: jobAd.title })
+          } else {
+            Logger.debug('Skipping job (already exists with same version)', { url: jobAd.url })
           }
-
-          await jobRepo.saveModel(jobAd)
-          totalSaved++
-          Logger.success('Job saved', { url: jobAd.url, title: jobAd.title })
         } catch (err: any) {
           Logger.error('Failed saving job', { url: jobAd.url, error: err?.message })
         }
