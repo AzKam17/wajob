@@ -121,7 +121,7 @@ async function main() {
     .createQueryBuilder('job')
     .where('job.deletedAt IS NULL')
     .andWhere(
-      `(job.internalExtras IS NULL OR job.internalExtras->>'version' IS NULL OR job.internalExtras->>'version' != '2')`
+      `(job."internalExtras" IS NULL OR job."internalExtras"->>'version' IS NULL OR job."internalExtras"->>'version' != '2')`
     )
     .orderBy('job.source', 'ASC')
     .addOrderBy('job.createdAt', 'DESC')

@@ -100,7 +100,7 @@ export class JobAdRepository extends BaseRepository<JobAdEntity> {
         ) @@ to_tsquery('french', :tsQuery)`,
         { tsQuery }
       )
-      .addOrderBy(`CASE WHEN job.internalExtras->>'version' = '2' THEN 0 ELSE 1 END`, 'ASC')
+      .addOrderBy(`CASE WHEN job."internalExtras"->>'version' = '2' THEN 0 ELSE 1 END`, 'ASC')
       .addOrderBy('job.postedDate', 'DESC')
       .skip(offset)
       .take(limit)
@@ -133,7 +133,7 @@ export class JobAdRepository extends BaseRepository<JobAdEntity> {
     }
 
     const [jobs, total] = await queryBuilder
-      .orderBy(`CASE WHEN job.internalExtras->>'version' = '2' THEN 0 ELSE 1 END`, 'ASC')
+      .orderBy(`CASE WHEN job."internalExtras"->>'version' = '2' THEN 0 ELSE 1 END`, 'ASC')
       .addOrderBy(`job.${sortBy}`, sortOrder)
       .skip(offset)
       .take(limit)
