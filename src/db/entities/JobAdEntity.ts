@@ -26,4 +26,7 @@ export class JobAdEntity extends BaseEntity {
 
   @Column({ type: 'jsonb', nullable: true })
   pageMetadata?: {}
+
+  @Column({ type: 'jsonb', nullable: true })
+  internalExtras?: Record<string, any>
 }

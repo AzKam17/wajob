@@ -7,6 +7,7 @@ export interface JobAdData {
   location?: string
   description?: string
   pageMetadata?: Record<string, any>
+  internalExtras?: Record<string, any>
 }
 
 export class JobAd {
@@ -22,6 +23,7 @@ export class JobAd {
   location?: string
   description?: string
   pageMetadata?: Record<string, any>
+  internalExtras?: Record<string, any>
 
   constructor(data: JobAdData) {
     this.title = data.title
@@ -32,6 +34,7 @@ export class JobAd {
     this.location = data.location
     this.description = data.description
     this.pageMetadata = data.pageMetadata
+    this.internalExtras = data.internalExtras
 
     console.log(`JobAd created: ${this.title} from ${this.source}`)
   }
@@ -49,6 +52,7 @@ export class JobAd {
       postedDate: this.postedDate,
       source: this.source,
       pageMetadata: this.pageMetadata,
+      internalExtras: this.internalExtras,
     }
   }
 }

@@ -5,6 +5,11 @@ interface SociumJobResult {
   title: string
   createdAt: string
   city: string
+  description?: string
+  skills?: string[]
+  bestCandidateProfil?: string
+  educationLevel?: string
+  contractType?: string
   jobCountry: {
     code: string
     name: string
@@ -72,6 +77,13 @@ export class SociumScraper {
       url: `${this.baseUrl}/jobs/${job.slug}`,
       postedDate: new Date(job.createdAt),
       source: 'Socium',
+      description: job.description,
+      pageMetadata: {
+        skills: job.skills,
+        bestCandidateProfil: job.bestCandidateProfil,
+        educationLevel: job.educationLevel,
+        contractType: job.contractType,
+      },
     }
 
     return new JobAd(jobData)
