@@ -34,7 +34,7 @@ export class JobAd {
     this.location = data.location
     this.description = data.description
     this.pageMetadata = data.pageMetadata
-    this.internalExtras = data.internalExtras
+    this.internalExtras = { version: '2', ...data.internalExtras }
 
     console.log(`JobAd created: ${this.title} from ${this.source}`)
   }

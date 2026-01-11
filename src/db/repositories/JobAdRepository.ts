@@ -36,6 +36,8 @@ export class JobAdRepository extends BaseRepository<JobAdEntity> {
 
       // If new version is higher than existing version, update the job
       if (newVersion > existingVersion) {
+        console.log(`[JobAdRepository] Updating job ${model.url} from version ${existingVersion} to ${newVersion}`)
+
         // Transform the title before saving
         model.title = TitleTransformer.transformWithArticles(model.title)
 
@@ -48,6 +50,7 @@ export class JobAdRepository extends BaseRepository<JobAdEntity> {
       }
 
       // Otherwise, skip saving (same version or lower version)
+      console.log(`[JobAdRepository] Skipping job ${model.url} - existing version: ${existingVersion}, new version: ${newVersion}`)
       return null
     }
 

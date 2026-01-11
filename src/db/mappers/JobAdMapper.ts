@@ -23,7 +23,7 @@ class JobAdMapperClass extends BaseMapper<JobAd, JobAdEntity> {
       postedDate: model.postedDate,
       source: model.source,
       pageMetadata: model.pageMetadata,
-      internalExtras: { version: '2', ...model.internalExtras },
+      internalExtras: { ...model.internalExtras },
     }
   }
 
