@@ -13,6 +13,8 @@ class JobAdMapperClass extends BaseMapper<JobAd, JobAdEntity> {
       url: model.url,
       postedDate: model.postedDate,
       source: model.source,
+      pageMetadata: model.pageMetadata,
+      internalExtras: model.internalExtras,
     }
   }
 
@@ -25,6 +27,8 @@ class JobAdMapperClass extends BaseMapper<JobAd, JobAdEntity> {
       url: entity.url,
       postedDate: entity.postedDate,
       source: entity.source,
+      pageMetadata: entity.pageMetadata,
+      internalExtras: entity.internalExtras,
     })
 
     // Set base fields
