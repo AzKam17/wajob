@@ -16,7 +16,8 @@
     "clear-jobs": "bun run scripts/clear-job-ads.ts",
     "force-scrape": "bun run scripts/force-scrape.ts",
     "migrate-jobs": "bun run scripts/add-job-columns.ts",
-    "create-indexes": "bun run scripts/create-indexes.ts"
+    "create-indexes": "bun run scripts/create-indexes.ts",
+    "update-job-versions": "bun run scripts/update-job-versions.ts"
   },
   "dependencies": {
     "@elysiajs/cors": "^1.4.1",
@@ -24,6 +25,7 @@
     "@microfox/whatsapp-business": "^1.5.2",
     "@yolk-oss/elysia-env": "^3.0.0",
     "bullmq": "^5.66.2",
+    "cli-progress": "^3.12.0",
     "date-fns": "^4.1.0",
     "elysia": "latest",
     "ioredis": "^5.8.2",
@@ -36,6 +38,7 @@
     "zod": "^4.2.1"
   },
   "devDependencies": {
+    "@types/cli-progress": "^3.11.6",
     "@xstate/inspect": "^0.8.0",
     "bun-types": "latest",
     "playwright": "^1.57.0"
