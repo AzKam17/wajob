@@ -9,6 +9,7 @@ interface ProJobIvoireJob {
   closingDate?: string
 }
 
+// TODO: Unable to find in db jobs ads to review and also add description and metadata
 export class ProJobIvoireScraper {
   private readonly apiUrl = 'https://projobivoire.com/wp-admin/admin-ajax.php'
 

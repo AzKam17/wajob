@@ -9,6 +9,7 @@ interface ScrapedJob {
   company: string
 }
 
+// TODO: Unable to find in db jobs ads to review and also add description and metadata
 export class OptionCarriereScraper {
   private readonly baseUrl = 'https://www.optioncarriere.ci'
 
