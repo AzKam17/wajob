@@ -9,7 +9,12 @@ interface ScrapedJob {
   company: string
 }
 
-// TODO: Unable to find in db jobs ads to review and also add description and metadata
+interface JobDetails {
+  description: string
+  pageMetadata: {
+    keywords?: string
+  }
+}
 export class OptionCarriereScraper {
   private readonly baseUrl = 'https://www.optioncarriere.ci'
 
@@ -53,7 +58,12 @@ export class OptionCarriereScraper {
         return scrapedJobs
       })
 
-      const jobAds = jobs.map(job => this.mapToJobAd(job))
+      // Fetch details for each job
+      const jobAds: JobAd[] = []
+      for (const job of jobs) {
+        const details = await this.scrapeJobDetails(page, job.url)
+        jobAds.push(this.mapToJobAd(job, details))
+      }
 
       return jobAds
     } finally {
@@ -61,7 +71,28 @@ export class OptionCarriereScraper {
     }
   }
 
-  private mapToJobAd(job: ScrapedJob): JobAd {
+  private async scrapeJobDetails(page: puppeteer.Page, url: string): Promise<JobDetails> {
+    await page.goto(url, { waitUntil: 'networkidle0' })
+
+    const details = await page.evaluate(() => {
+      const jobArticle = document.querySelector('article#job')
+      const description = jobArticle?.textContent?.trim() || ''
+
+      const metaKeywords = document.querySelector('meta[name="keywords"]')
+      const keywords = metaKeywords?.getAttribute('content') || ''
+
+      return {
+        description,
+        pageMetadata: {
+          keywords,
+        },
+      }
+    })
+
+    return details
+  }
+
+  private mapToJobAd(job: ScrapedJob, details?: JobDetails): JobAd {
     const jobData: JobAdData = {
       title: job.title,
       company: job.company,
@@ -69,6 +100,8 @@ export class OptionCarriereScraper {
       url: job.url,
       postedDate: new Date(),
       source: 'OptionCarriere',
+      description: details?.description,
+      pageMetadata: details?.pageMetadata,
     }
 
     return new JobAd(jobData)
