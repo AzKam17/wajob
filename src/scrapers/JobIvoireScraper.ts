@@ -9,6 +9,13 @@ interface ScrapedJob {
   timePosted: string
 }
 
+interface JobDetails {
+  description: string
+  pageMetadata: {
+    keywords?: string
+  }
+}
+
 export class JobIvoireScraper {
   private readonly baseUrl = 'https://www.jobivoire.ci'
 
@@ -44,7 +51,11 @@ export class JobIvoireScraper {
         return scrapedJobs
       })
 
-      const jobAds = jobs.map(job => this.mapToJobAd(job))
+      const jobAds: JobAd[] = []
+      for (const job of jobs) {
+        const details = await this.scrapeJobDetails(page, job.url)
+        jobAds.push(this.mapToJobAd(job, details))
+      }
 
       return jobAds
     } finally {
@@ -52,13 +63,36 @@ export class JobIvoireScraper {
     }
   }
 
-  private mapToJobAd(job: ScrapedJob): JobAd {
+  private async scrapeJobDetails(page: puppeteer.Page, url: string): Promise<JobDetails> {
+    await page.goto(url, { waitUntil: 'networkidle0' })
+
+    const details = await page.evaluate(() => {
+      const metaDescription = document.querySelector('meta[name="description"]')
+      const description = metaDescription?.getAttribute('content') || ''
+
+      const metaKeywords = document.querySelector('meta[name="keywords"]')
+      const keywords = metaKeywords?.getAttribute('content') || ''
+
+      return {
+        description,
+        pageMetadata: {
+          keywords,
+        },
+      }
+    })
+
+    return details
+  }
+
+  private mapToJobAd(job: ScrapedJob, details?: JobDetails): JobAd {
     const jobData: JobAdData = {
       title: job.title,
       location: job.location,
       url: job.url,
       postedDate: new Date(),
       source: 'JobIvoire',
+      description: details?.description,
+      pageMetadata: details?.pageMetadata,
     }
 
     return new JobAd(jobData)
