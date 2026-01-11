@@ -9,6 +9,10 @@ interface ScrapedJob {
   department: string
 }
 
+interface JobDetails {
+  description: string
+}
+
 const COUNTRY_FLAGS: Record<string, string> = {
   CI: '🇨🇮',
   SN: '🇸🇳',
@@ -47,10 +51,13 @@ export class DjamoScraper {
         return scrapedJobs
       })
 
-      // Filter only jobs from Abidjan
       const abidjanJobs = jobs.filter(job => job.location.includes('Abidjan'))
 
-      const jobAds = abidjanJobs.map(job => this.mapToJobAd(job))
+      const jobAds: JobAd[] = []
+      for (const job of abidjanJobs) {
+        const details = await this.scrapeJobDetails(page, job.url)
+        jobAds.push(this.mapToJobAd(job, details))
+      }
 
       return jobAds
     } finally {
@@ -58,7 +65,22 @@ export class DjamoScraper {
     }
   }
 
-  private mapToJobAd(job: ScrapedJob): JobAd {
+  private async scrapeJobDetails(page: puppeteer.Page, url: string): Promise<JobDetails> {
+    await page.goto(url, { waitUntil: 'networkidle0' })
+
+    const details = await page.evaluate(() => {
+      const metaDescription = document.querySelector('meta[name="description"]')
+      const description = metaDescription?.getAttribute('content') || ''
+
+      return {
+        description,
+      }
+    })
+
+    return details
+  }
+
+  private mapToJobAd(job: ScrapedJob, details?: JobDetails): JobAd {
     const countryCode = this.extractCountryCode(job.location)
     const countryFlag = COUNTRY_FLAGS[countryCode] || ''
     const titleWithFlag = countryFlag
@@ -72,6 +94,7 @@ export class DjamoScraper {
       url: job.url,
       postedDate: new Date(),
       source: 'Djamo',
+      description: details?.description,
     }
 
     return new JobAd(jobData)

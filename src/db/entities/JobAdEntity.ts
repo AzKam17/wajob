@@ -23,4 +23,7 @@ export class JobAdEntity extends BaseEntity {
 
   @Column()
   source!: string
+
+  @Column({ type: 'jsonb', nullable: true })
+  pageMetadata?: {}
 }
