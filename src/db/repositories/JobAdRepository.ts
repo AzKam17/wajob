@@ -68,11 +68,13 @@ export class JobAdRepository extends BaseRepository<JobAdEntity> {
           to_tsvector('french', COALESCE(job.title, '')) ||
           to_tsvector('french', COALESCE(job.description, '')) ||
           to_tsvector('french', COALESCE(job.company, '')) ||
-          to_tsvector('french', COALESCE(job.location, ''))
+          to_tsvector('french', COALESCE(job.location, '')) ||
+          to_tsvector('french', COALESCE(job.pageMetadata::text, ''))
         ) @@ to_tsquery('french', :tsQuery)`,
         { tsQuery }
       )
-      .orderBy('job.postedDate', 'DESC')
+      .addOrderBy(`CASE WHEN job.internalExtras->>'version' = '2' THEN 0 ELSE 1 END`, 'ASC')
+      .addOrderBy('job.postedDate', 'DESC')
       .skip(offset)
       .take(limit)
       .getMany()
@@ -98,13 +100,14 @@ export class JobAdRepository extends BaseRepository<JobAdEntity> {
 
     if (search) {
       queryBuilder.andWhere(
-        '(job.title ILIKE :search OR job.company ILIKE :search OR job.location ILIKE :search OR job.description ILIKE :search)',
+        '(job.title ILIKE :search OR job.company ILIKE :search OR job.location ILIKE :search OR job.description ILIKE :search OR job.pageMetadata::text ILIKE :search)',
         { search: `%${search}%` }
       )
     }
 
     const [jobs, total] = await queryBuilder
-      .orderBy(`job.${sortBy}`, sortOrder)
+      .orderBy(`CASE WHEN job.internalExtras->>'version' = '2' THEN 0 ELSE 1 END`, 'ASC')
+      .addOrderBy(`job.${sortBy}`, sortOrder)
       .skip(offset)
       .take(limit)
       .getManyAndCount()
