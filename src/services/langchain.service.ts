@@ -99,8 +99,18 @@ export class LangchainService {
       await this.addToHistory(phoneNumber, new AIMessage(JSON.stringify(action)))
 
       return action
-    } catch (error) {
-      Logger.error('[Langchain] Error analyzing message', { error, phoneNumber, message })
+    } catch (error: any) {
+      Logger.error('[Langchain] Error analyzing message', {
+        error: {
+          message: error?.message,
+          name: error?.name,
+          stack: error?.stack,
+          response: error?.response?.data,
+          status: error?.response?.status,
+        },
+        phoneNumber,
+        message
+      })
       // Fallback to basic analysis
       return this.fallbackAnalysis(message)
     }
