@@ -22,6 +22,9 @@
   "dependencies": {
     "@elysiajs/cors": "^1.4.1",
     "@elysiajs/cron": "^1.4.1",
+    "@langchain/community": "^1.1.3",
+    "@langchain/core": "^1.1.12",
+    "@langchain/groq": "^1.0.2",
     "@microfox/whatsapp-business": "^1.5.2",
     "@yolk-oss/elysia-env": "^3.0.0",
     "bullmq": "^5.66.2",
@@ -29,6 +32,7 @@
     "date-fns": "^4.1.0",
     "elysia": "latest",
     "ioredis": "^5.8.2",
+    "langchain": "^1.2.7",
     "node-nlp": "^5.0.0-alpha.5",
     "pg": "^8.16.3",
     "puppeteer": "^24.34.0",
@@ -37,7 +41,7 @@
     "typeorm": "^0.3.28",
     "uuid": "^13.0.0",
     "xstate": "^5.25.0",
-    "zod": "^4.2.1"
+    "zod": "^4.3.5"
   },
   "devDependencies": {
     "@types/cli-progress": "^3.11.6",

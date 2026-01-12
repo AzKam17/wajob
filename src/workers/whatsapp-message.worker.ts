@@ -4,6 +4,7 @@ import { WhatsAppMessageJobData } from '../queues/whatsapp-message.queue'
 import { Logger } from '../utils/logger'
 import { WhatsAppMessageService } from '../services/whatsapp-message.service'
 import { WhatsAppMessageNLPService } from '../services/whatsapp-message-nlp.service'
+import { WhatsAppMessageLangchainService } from '../services/whatsapp-message-langchain.service'
 import { ConversationStateService } from '../services/conversation-state.service'
 import { ChatHistoryService } from '../services/chat-history.service'
 import { FeatureFlags } from '../config/feature-flags'
@@ -12,6 +13,7 @@ let whatsappMessageWorker: Worker<WhatsAppMessageJobData> | null = null
 let conversationStateService: ConversationStateService | null = null
 let chatHistoryService: ChatHistoryService | null = null
 let whatsappNLPService: WhatsAppMessageNLPService | null = null
+let whatsappLangchainService: WhatsAppMessageLangchainService | null = null
 
 async function processWhatsAppMessage(job: Job<WhatsAppMessageJobData>): Promise<void> {
   const { payload, receivedAt } = job.data
@@ -37,8 +39,22 @@ async function processWhatsAppMessage(job: Job<WhatsAppMessageJobData>): Promise
   }
 
   try {
-    // Check if NLP is enabled for this user
-    if (phoneNumber && FeatureFlags.isNLPEnabled(phoneNumber)) {
+    // Check feature flags in priority order: Langchain > NLP > XState
+    if (phoneNumber && FeatureFlags.isLangchainEnabled(phoneNumber)) {
+      Logger.info('[FeatureFlag] Using Langchain+Grok conversation handler', { phoneNumber })
+
+      // Initialize Langchain service if needed
+      if (!whatsappLangchainService) {
+        const redis = getRedisConnection(
+          process.env.REDIS_HOST || 'localhost',
+          parseInt(process.env.REDIS_PORT || '6379'),
+          process.env.REDIS_PASSWORD
+        )
+        whatsappLangchainService = new WhatsAppMessageLangchainService(redis, chatHistoryService)
+      }
+
+      await whatsappLangchainService.handleIncomingMessage(payload)
+    } else if (phoneNumber && FeatureFlags.isNLPEnabled(phoneNumber)) {
       Logger.info('[FeatureFlag] Using NLP-based conversation handler', { phoneNumber })
 
       // Initialize NLP service if needed
