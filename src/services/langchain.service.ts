@@ -1,4 +1,4 @@
-import { ChatOpenAI } from '@langchain/openai'
+import { ChatXAI } from '@langchain/xai'
 import { HumanMessage, AIMessage, BaseMessage } from '@langchain/core/messages'
 import { PromptTemplate } from '@langchain/core/prompts'
 import { StructuredOutputParser } from '@langchain/core/output_parsers'
@@ -21,7 +21,7 @@ export type ConversationAction = z.infer<typeof ConversationActionSchema>
  * Advanced conversation handling with context awareness
  */
 export class LangchainService {
-  private llm: ChatOpenAI
+  private llm: ChatXAI
   private redis: Redis
   private parser
   private prompt
@@ -37,15 +37,13 @@ export class LangchainService {
     }
 
     // Initialize Grok LLM (OpenAI-compatible API)
-    this.llm = new ChatOpenAI({
-      modelName: 'grok-beta',
-      temperature: 0, // CRITICAL for extraction - déterministe
-      openAIApiKey: apiKey,
-      configuration: {
-        baseURL: 'https://api.x.ai/v1',
-      },
+    this.llm = new ChatXAI({
+      model: 'grok-beta',
+      temperature: 0,
+      apiKey: apiKey,
     })
 
+    Logger.info('[Langchain] Grok LLM initialized', { model: 'grok-beta', apiKey })
     // Initialize structured output parser
     this.parser = StructuredOutputParser.fromZodSchema(ConversationActionSchema)
 
