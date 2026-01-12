@@ -28,6 +28,11 @@ class FeatureFlagService {
    * Check if NLP conversation is enabled for a phone number
    */
   isNLPConversationEnabled(phoneNumber: string): boolean {
+    // Check if enabled globally for everyone
+    if (process.env.NLP_ENABLED_FOR_ALL === 'true') {
+      return true
+    }
+    // Otherwise check if user is in the beta list
     return this.flags.nlpConversation.includes(phoneNumber)
   }
 
@@ -35,6 +40,11 @@ class FeatureFlagService {
    * Check if Langchain conversation is enabled for a phone number
    */
   isLangchainConversationEnabled(phoneNumber: string): boolean {
+    // Check if enabled globally for everyone
+    if (process.env.LANGCHAIN_ENABLED_FOR_ALL === 'true') {
+      return true
+    }
+    // Otherwise check if user is in the beta list
     return this.flags.langchainConversation.includes(phoneNumber)
   }
 
@@ -130,11 +140,16 @@ class FeatureFlagService {
   }
 
   private logEnabledFeatures(): void {
+    const nlpEnabledForAll = process.env.NLP_ENABLED_FOR_ALL === 'true'
+    const langchainEnabledForAll = process.env.LANGCHAIN_ENABLED_FOR_ALL === 'true'
+
     Logger.info('Feature flags loaded', {
+      nlpEnabledForAll,
       nlpConversationUsers: this.flags.nlpConversation.length,
-      nlpUsers: this.flags.nlpConversation,
+      nlpUsers: nlpEnabledForAll ? 'ALL USERS' : this.flags.nlpConversation,
+      langchainEnabledForAll,
       langchainConversationUsers: this.flags.langchainConversation.length,
-      langchainUsers: this.flags.langchainConversation,
+      langchainUsers: langchainEnabledForAll ? 'ALL USERS' : this.flags.langchainConversation,
     })
   }
 }

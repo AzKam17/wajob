@@ -43,7 +43,6 @@ export class LangchainService {
       apiKey: apiKey,
     })
 
-    Logger.info('[Langchain] Grok LLM initialized', { model: 'grok-4-1-fast-reasoning', apiKey })
     // Initialize structured output parser
     this.parser = StructuredOutputParser.fromZodSchema(ConversationActionSchema)
 
