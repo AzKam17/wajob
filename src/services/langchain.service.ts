@@ -38,12 +38,12 @@ export class LangchainService {
 
     // Initialize Grok LLM (OpenAI-compatible API)
     this.llm = new ChatXAI({
-      model: 'grok-beta',
+      model: 'grok-4-1-fast-reasoning',
       temperature: 0,
       apiKey: apiKey,
     })
 
-    Logger.info('[Langchain] Grok LLM initialized', { model: 'grok-beta', apiKey })
+    Logger.info('[Langchain] Grok LLM initialized', { model: 'grok-4-1-fast-reasoning', apiKey })
     // Initialize structured output parser
     this.parser = StructuredOutputParser.fromZodSchema(ConversationActionSchema)
 
