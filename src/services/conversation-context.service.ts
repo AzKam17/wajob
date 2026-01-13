@@ -11,7 +11,6 @@ export interface ConversationContext {
   lastQuery?: string
   lastOffset?: number
   messageCount: number
-  latestRequestId?: string
 }
 
 /**
@@ -87,15 +86,6 @@ export class ConversationContextService {
   async incrementMessageCount(phoneNumber: string): Promise<void> {
     const context = await this.getOrCreate(phoneNumber)
     context.messageCount += 1
-    await this.save(context)
-  }
-
-  /**
-   * Update latest request ID
-   */
-  async updateLatestRequestId(phoneNumber: string, requestId: string): Promise<void> {
-    const context = await this.getOrCreate(phoneNumber)
-    context.latestRequestId = requestId
     await this.save(context)
   }
 

@@ -288,40 +288,21 @@ export class WhatsAppMessageService {
     let offset: number = 0
 
     if (isSeeMore) {
-      // Handle pagination request (no debounce for pagination)
+      // Handle pagination request
       const result = await this.handlePaginationRequest(ctx)
       if (!result) return // Early exit if no previous query
 
       userQuery = result.query
       offset = result.offset
-
-      // Execute pagination immediately without debounce
-      await this.executeJobSearch(ctx, userQuery, offset)
     } else {
-      // Handle new search query with debounce
+      // Handle new search query
       userQuery = ctx.messageText
       offset = 0
-      Logger.info('Scheduling debounced job search', { from: ctx.from, query: userQuery })
-
-      // Generate and store request ID
-      const requestId = await this.conversationState.generateAndStoreRequestId(ctx.from)
-
-      // Schedule search with debounce
-      this.conversationState.getDebounceManager().scheduleRequest(
-        ctx.from,
-        userQuery,
-        async (finalRequestId, finalQuery) => {
-          Logger.info('Executing debounced job search', {
-            from: ctx.from,
-            query: finalQuery,
-            requestId: finalRequestId,
-          })
-
-          // Execute search with request ID
-          await this.executeJobSearch(ctx, finalQuery, offset, finalRequestId)
-        }
-      )
+      Logger.info('Processing new job search', { from: ctx.from, query: userQuery })
     }
+
+    // Execute job search
+    await this.executeJobSearch(ctx, userQuery, offset)
   }
 
   /**
@@ -385,8 +366,7 @@ export class WhatsAppMessageService {
   private async executeJobSearch(
     ctx: MessageContext,
     userQuery: string,
-    offset: number,
-    requestId?: string
+    offset: number
   ): Promise<void> {
     // Send processing message to user
     if (offset === 0) {
@@ -418,23 +398,8 @@ export class WhatsAppMessageService {
       query: userQuery,
       offset,
       count: jobs.length,
-      requestId,
       jobs: jobs.map((j) => ({ title: j.title, linkId: j.linkId })),
     })
-
-    // If requestId provided, validate it's still the latest before sending results
-    if (requestId) {
-      const isLatest = await this.conversationState.isLatestRequest(ctx.from, requestId)
-      if (!isLatest) {
-        Logger.info('Discarding outdated search results', {
-          from: ctx.from,
-          query: userQuery,
-          requestId,
-          reason: 'newer request exists',
-        })
-        return // Discard results, newer request exists
-      }
-    }
 
     if (jobs.length > 0) {
       await this.sendJobResults(ctx, jobs, userQuery, offset)

@@ -190,7 +190,7 @@ export class WhatsAppMessageNLPService {
       Logger.success('[NLP] Welcome flow sent successfully', { to: from })
     }
 
-    // PAGINATION FLOW (no debounce for pagination)
+    // PAGINATION FLOW
     if (shouldPaginate && context.lastQuery) {
       Logger.info('[NLP] Processing pagination request', {
         from,
@@ -202,31 +202,15 @@ export class WhatsAppMessageNLPService {
       return
     }
 
-    // JOB SEARCH FLOW (with debounce)
+    // JOB SEARCH FLOW
     if (shouldSearch && searchQuery) {
-      Logger.info('[NLP] Scheduling debounced job search', {
+      Logger.info('[NLP] Processing job search', {
         from,
         query: searchQuery,
         intent: intent.intent
       })
 
-      // Generate and store request ID
-      const requestId = await this.conversationHandler.generateAndStoreRequestId(from)
-
-      // Schedule search with debounce
-      this.conversationHandler.getDebounceManager().scheduleRequest(
-        from,
-        searchQuery,
-        async (finalRequestId, finalQuery) => {
-          Logger.info('[NLP] Executing debounced job search', {
-            from,
-            query: finalQuery,
-            requestId: finalRequestId,
-          })
-
-          await this.executeJobSearch(from, context.sessionId, finalQuery, 0, existingUser, finalRequestId)
-        }
-      )
+      await this.executeJobSearch(from, context.sessionId, searchQuery, 0, existingUser)
       return
     }
 
@@ -280,8 +264,7 @@ export class WhatsAppMessageNLPService {
     sessionId: string,
     query: string,
     offset: number,
-    existingUser: any,
-    requestId?: string
+    existingUser: any
   ): Promise<void> {
     // Send processing message to user
     if (offset === 0) {
@@ -313,22 +296,7 @@ export class WhatsAppMessageNLPService {
       query,
       offset,
       count: jobs.length,
-      requestId,
     })
-
-    // If requestId provided, validate it's still the latest before sending results
-    if (requestId) {
-      const isLatest = await this.conversationHandler.isLatestRequest(from, requestId)
-      if (!isLatest) {
-        Logger.info('[NLP] Discarding outdated search results', {
-          from,
-          query,
-          requestId,
-          reason: 'newer request exists',
-        })
-        return // Discard results, newer request exists
-      }
-    }
 
     if (jobs.length > 0) {
       await this.sendJobResults(from, sessionId, jobs, query, offset, existingUser)

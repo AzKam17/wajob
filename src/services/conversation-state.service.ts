@@ -6,24 +6,17 @@ import {
 } from '@/machines/conversationMachine'
 import { ConversationSession, ConversationSessionSchema } from '@/models/ChatMessage'
 import { randomUUID } from 'crypto'
-import { DebounceManager, RequestValidator } from '@/utils/debounce'
 
 export class ConversationStateService {
   private readonly SESSION_PREFIX = 'conversation:session:'
   private readonly ACTIVE_TOKEN_PREFIX = 'conversation:active:'
   private readonly SESSION_TTL = 20 * 60 // 20 minutes in seconds
   private readonly ACTIVE_TOKEN_TTL = 20 * 60 // 20 minutes in seconds
-  private readonly DEBOUNCE_MS = 500 // 500ms debounce for search requests
 
   // In-memory cache of active actors (for performance)
   private actors = new Map<string, ReturnType<typeof createActor<typeof conversationMachine>>>()
 
-  // Debounce manager for handling rapid consecutive searches
-  private debounceManager: DebounceManager
-
-  constructor(private readonly redis: Redis) {
-    this.debounceManager = new DebounceManager(this.DEBOUNCE_MS)
-  }
+  constructor(private readonly redis: Redis) {}
 
   async loadOrCreateSession(phoneNumber: string): Promise<ConversationSession> {
     const key = this.getSessionKey(phoneNumber)
@@ -206,51 +199,6 @@ export class ConversationStateService {
   async getContext(phoneNumber: string): Promise<ConversationContext> {
     const session = await this.loadOrCreateSession(phoneNumber)
     return session.context
-  }
-
-  /**
-   * Generate a new request ID and update it in the conversation context
-   */
-  async generateAndStoreRequestId(phoneNumber: string): Promise<string> {
-    const requestId = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
-
-    const session = await this.loadOrCreateSession(phoneNumber)
-    const actor = this.actors.get(phoneNumber)
-
-    if (actor) {
-      // Update context with new request ID
-      const snapshot = actor.getSnapshot()
-      const updatedContext: ConversationContext = {
-        ...snapshot.context,
-        latestRequestId: requestId,
-      }
-
-      await this.persistSession(phoneNumber, session.sessionId, snapshot.value as string, updatedContext)
-    }
-
-    return requestId
-  }
-
-  /**
-   * Check if a request ID is still the latest one
-   */
-  async isLatestRequest(phoneNumber: string, requestId: string): Promise<boolean> {
-    const context = await this.getContext(phoneNumber)
-    return RequestValidator.isLatestRequest(requestId, context.latestRequestId)
-  }
-
-  /**
-   * Cancel any pending debounced requests for a phone number
-   */
-  cancelPendingRequest(phoneNumber: string): void {
-    this.debounceManager.cancelPendingRequest(phoneNumber)
-  }
-
-  /**
-   * Get the debounce manager (for advanced usage)
-   */
-  getDebounceManager(): DebounceManager {
-    return this.debounceManager
   }
 
   async clearSession(phoneNumber: string): Promise<void> {

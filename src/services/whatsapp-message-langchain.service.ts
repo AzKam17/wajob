@@ -6,14 +6,12 @@ import { Logger } from '../utils/logger'
 import { LangchainService, ConversationAction } from './langchain.service'
 import { ChatHistoryService } from './chat-history.service'
 import type { Redis } from 'ioredis'
-import { DebounceManager, RequestValidator } from '@/utils/debounce'
 
 interface ConversationContext {
   sessionId: string
   welcomeSent: boolean
   lastQuery?: string
   lastOffset?: number
-  latestRequestId?: string
 }
 
 /**
@@ -26,19 +24,16 @@ export class WhatsAppMessageLangchainService {
   private jobSearch = new JobSearchService()
   private langchain: LangchainService
   private contextCache = new Map<string, ConversationContext>()
-  private debounceManager: DebounceManager
 
   // Track processed message IDs to prevent duplicate processing
   private processedMessages = new Set<string>()
   private readonly MAX_PROCESSED_CACHE = 1000
-  private readonly DEBOUNCE_MS = 500 // 500ms debounce for search requests
 
   constructor(
     redis: Redis,
     private readonly chatHistory: ChatHistoryService
   ) {
     this.langchain = new LangchainService(redis)
-    this.debounceManager = new DebounceManager(this.DEBOUNCE_MS)
   }
 
   async handleIncomingMessage(payload: WhatsAppWebhookPayload): Promise<void> {
@@ -193,37 +188,20 @@ export class WhatsAppMessageLangchainService {
       return
     }
 
-    // JOB SEARCH FLOW (with debounce)
+    // JOB SEARCH FLOW
     if (action.action === 'search' && action.query) {
-      Logger.info('[Langchain] Scheduling debounced job search', {
+      Logger.info('[Langchain] Processing job search', {
         from,
         query: action.query,
       })
 
-      // Generate request ID
-      const requestId = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
-      context.latestRequestId = requestId
-
-      // Schedule search with debounce
-      this.debounceManager.scheduleRequest(
-        from,
-        action.query,
-        async (finalRequestId, finalQuery) => {
-          Logger.info('[Langchain] Executing debounced job search', {
-            from,
-            query: finalQuery,
-            requestId: finalRequestId,
-          })
-
-          await this.executeJobSearch(from, context.sessionId, finalQuery, 0, existingUser, finalRequestId)
-          context.lastQuery = finalQuery
-          context.lastOffset = 0
-        }
-      )
+      await this.executeJobSearch(from, context.sessionId, action.query, 0, existingUser)
+      context.lastQuery = action.query
+      context.lastOffset = 0
       return
     }
 
-    // PAGINATION FLOW (no debounce for pagination)
+    // PAGINATION FLOW
     if (action.action === 'paginate' && context.lastQuery) {
       const offset = context.lastOffset || 0
       const newOffset = offset + (action.offset || 5)
@@ -286,8 +264,7 @@ export class WhatsAppMessageLangchainService {
     sessionId: string,
     query: string,
     offset: number,
-    existingUser: any,
-    requestId?: string
+    existingUser: any
   ): Promise<void> {
     // Send processing message to user
     if (offset === 0) {
@@ -319,23 +296,7 @@ export class WhatsAppMessageLangchainService {
       query,
       offset,
       count: jobs.length,
-      requestId,
     })
-
-    // If requestId provided, validate it's still the latest before sending results
-    if (requestId) {
-      const context = this.contextCache.get(from)
-      const isLatest = RequestValidator.isLatestRequest(requestId, context?.latestRequestId)
-      if (!isLatest) {
-        Logger.info('[Langchain] Discarding outdated search results', {
-          from,
-          query,
-          requestId,
-          reason: 'newer request exists',
-        })
-        return // Discard results, newer request exists
-      }
-    }
 
     if (jobs.length > 0) {
       await this.sendJobResults(from, sessionId, jobs, query, offset, existingUser)

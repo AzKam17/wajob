@@ -177,8 +177,6 @@ export interface ConversationContext {
   lastMessageAt: number
   lastQuery?: string
   lastOffset?: number
-  latestRequestId?: string // Tracks the most recent search request ID
-  pendingDebounceTimeout?: number // Tracks debounce timeout for cancellation
 }
 
 export type ConversationEvent =
@@ -237,9 +235,6 @@ export const conversationMachine = setup({
         return undefined
       },
     }),
-    generateRequestId: assign({
-      latestRequestId: () => `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-    }),
     updatePaginationOffset: assign({
       lastOffset: ({ event }) => {
         if (event.type === 'PAGINATION_REQUESTED') {
@@ -252,8 +247,6 @@ export const conversationMachine = setup({
       welcomeSentAt: undefined,
       lastQuery: undefined,
       lastOffset: undefined,
-      latestRequestId: undefined,
-      pendingDebounceTimeout: undefined,
     }),
   },
 }).createMachine({

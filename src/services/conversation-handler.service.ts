@@ -2,7 +2,6 @@ import { NLPService, IntentClassification } from './nlp.service'
 import { ConversationContextService, ConversationContext } from './conversation-context.service'
 import type { Redis } from 'ioredis'
 import { Logger } from '../utils/logger'
-import { DebounceManager, RequestValidator } from '@/utils/debounce'
 
 export interface ConversationResponse {
   context: ConversationContext
@@ -21,13 +20,10 @@ export interface ConversationResponse {
 export class ConversationHandler {
   private nlp: NLPService
   private contextService: ConversationContextService
-  private debounceManager: DebounceManager
-  private readonly DEBOUNCE_MS = 500
 
   constructor(redis: Redis) {
     this.nlp = new NLPService()
     this.contextService = new ConversationContextService(redis)
-    this.debounceManager = new DebounceManager(this.DEBOUNCE_MS)
   }
 
   async initialize(): Promise<void> {
@@ -154,29 +150,5 @@ export class ConversationHandler {
    */
   async clearContext(phoneNumber: string): Promise<void> {
     await this.contextService.clearContext(phoneNumber)
-  }
-
-  /**
-   * Generate a new request ID and store it in context
-   */
-  async generateAndStoreRequestId(phoneNumber: string): Promise<string> {
-    const requestId = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
-    await this.contextService.updateLatestRequestId(phoneNumber, requestId)
-    return requestId
-  }
-
-  /**
-   * Check if a request ID is still the latest one
-   */
-  async isLatestRequest(phoneNumber: string, requestId: string): Promise<boolean> {
-    const context = await this.contextService.getOrCreate(phoneNumber)
-    return RequestValidator.isLatestRequest(requestId, context.latestRequestId)
-  }
-
-  /**
-   * Get the debounce manager
-   */
-  getDebounceManager(): DebounceManager {
-    return this.debounceManager
   }
 }
