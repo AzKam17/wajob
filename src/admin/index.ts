@@ -5,6 +5,7 @@ import { MessageRepository } from '../db/repositories/MessageRepository'
 import { ConversationRepository } from '../db/repositories/ConversationRepository'
 import { PersonalizedLinkRepository } from '../db/repositories/PersonalizedLinkRepository'
 import { cors } from '@elysiajs/cors'
+import { basicAuth } from '../middleware/basicAuth'
 
 // Valid sort columns for each entity
 const jobSortColumns = ['title', 'company', 'location', 'source', 'postedDate', 'createdAt', 'updatedAt']
@@ -13,6 +14,7 @@ const conversationSortColumns = ['phoneNumber', 'messageCount', 'status', 'start
 
 export const adminRoutes = new Elysia({ prefix: '/admin' })
   .use(cors())
+  .use(basicAuth())
   .get('/jobs', async ({ query }) => {
     const jobRepo = new JobAdRepository()
     const page = parseInt(query.page || '1')

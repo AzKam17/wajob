@@ -14,6 +14,20 @@ interface ApiResponse<T> {
   pagination: Pagination;
 }
 
+function getAuthHeaders(): HeadersInit {
+  const username = localStorage.getItem('admin_username')
+  const password = localStorage.getItem('admin_password')
+
+  if (!username || !password) {
+    return {}
+  }
+
+  const credentials = btoa(`${username}:${password}`)
+  return {
+    'Authorization': `Basic ${credentials}`
+  }
+}
+
 export async function fetchJobs(page: number, limit: number, search: string, sort?: SortConfig): Promise<ApiResponse<any>> {
   const params = new URLSearchParams({
     page: page.toString(),
@@ -27,8 +41,15 @@ export async function fetchJobs(page: number, limit: number, search: string, sor
     params.set('sortOrder', sort.order);
   }
 
-  const response = await fetch(`${API_URL}/admin/jobs?${params}`);
+  const response = await fetch(`${API_URL}/admin/jobs?${params}`, {
+    headers: getAuthHeaders()
+  });
   if (!response.ok) {
+    if (response.status === 401) {
+      localStorage.removeItem('admin_username')
+      localStorage.removeItem('admin_password')
+      window.location.reload()
+    }
     throw new Error('Failed to fetch jobs');
   }
   return response.json();
@@ -47,8 +68,15 @@ export async function fetchBotUsers(page: number, limit: number, search: string,
     params.set('sortOrder', sort.order);
   }
 
-  const response = await fetch(`${API_URL}/admin/bot-users?${params}`);
+  const response = await fetch(`${API_URL}/admin/bot-users?${params}`, {
+    headers: getAuthHeaders()
+  });
   if (!response.ok) {
+    if (response.status === 401) {
+      localStorage.removeItem('admin_username')
+      localStorage.removeItem('admin_password')
+      window.location.reload()
+    }
     throw new Error('Failed to fetch bot users');
   }
   return response.json();
@@ -66,8 +94,15 @@ export interface BotUserStats {
 }
 
 export async function fetchBotUserStats(phoneNumber: string): Promise<BotUserStats> {
-  const response = await fetch(`${API_URL}/admin/bot-users/${encodeURIComponent(phoneNumber)}/stats`);
+  const response = await fetch(`${API_URL}/admin/bot-users/${encodeURIComponent(phoneNumber)}/stats`, {
+    headers: getAuthHeaders()
+  });
   if (!response.ok) {
+    if (response.status === 401) {
+      localStorage.removeItem('admin_username')
+      localStorage.removeItem('admin_password')
+      window.location.reload()
+    }
     throw new Error('Failed to fetch bot user stats');
   }
   return response.json();
@@ -126,8 +161,15 @@ export async function fetchConversations(page: number, limit: number, search: st
     params.set('sortOrder', sort.order);
   }
 
-  const response = await fetch(`${API_URL}/admin/conversations?${params}`);
+  const response = await fetch(`${API_URL}/admin/conversations?${params}`, {
+    headers: getAuthHeaders()
+  });
   if (!response.ok) {
+    if (response.status === 401) {
+      localStorage.removeItem('admin_username')
+      localStorage.removeItem('admin_password')
+      window.location.reload()
+    }
     throw new Error('Failed to fetch conversations');
   }
   return response.json();
@@ -165,8 +207,15 @@ export interface ConversationMessages {
 }
 
 export async function fetchConversationMessages(conversationId: string): Promise<ConversationMessages> {
-  const response = await fetch(`${API_URL}/admin/conversations/${conversationId}/messages`);
+  const response = await fetch(`${API_URL}/admin/conversations/${conversationId}/messages`, {
+    headers: getAuthHeaders()
+  });
   if (!response.ok) {
+    if (response.status === 401) {
+      localStorage.removeItem('admin_username')
+      localStorage.removeItem('admin_password')
+      window.location.reload()
+    }
     throw new Error('Failed to fetch conversation messages');
   }
   return response.json();
@@ -187,8 +236,15 @@ export async function fetchStats(startTime: number, endTime: number): Promise<St
     endTime: endTime.toString(),
   });
 
-  const response = await fetch(`${API_URL}/admin/stats?${params}`);
+  const response = await fetch(`${API_URL}/admin/stats?${params}`, {
+    headers: getAuthHeaders()
+  });
   if (!response.ok) {
+    if (response.status === 401) {
+      localStorage.removeItem('admin_username')
+      localStorage.removeItem('admin_password')
+      window.location.reload()
+    }
     throw new Error('Failed to fetch stats');
   }
   return response.json();
