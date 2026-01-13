@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
-import { X, MousePointer } from 'lucide-react';
-import { Message, Conversation, PersonalizedLink } from '@/lib/api';
+import { useEffect, useRef, useState } from 'react';
+import { X, MousePointer, RefreshCw, Check, AlertCircle } from 'lucide-react';
+import { Message, Conversation, PersonalizedLink, replayMessage } from '@/lib/api';
 import { formatDate, formatTime } from '@/lib/utils';
 
 // Parse user agent to get a readable device/browser string
@@ -158,17 +158,76 @@ export function ChatPanel({ isOpen, onClose, conversation, messages, links, load
 
 function MessageBubble({ message, links }: { message: Message; links: PersonalizedLink[] }) {
   const isOutgoing = message.direction === 'outgoing';
+  const isIncoming = message.direction === 'incoming';
   const timestamp = formatTime(message.timestamp);
+
+  const [replayState, setReplayState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+
+  const handleReplay = async () => {
+    if (!message.content.text) {
+      alert('Cannot replay: message has no text content');
+      return;
+    }
+
+    const confirmed = window.confirm(`Re-send this message to the bot for processing?\n\n"${message.content.text}"`);
+    if (!confirmed) return;
+
+    setReplayState('loading');
+    try {
+      await replayMessage(
+        message.id,
+        message.phoneNumber,
+        message.content.text,
+        message.timestamp
+      );
+      setReplayState('success');
+      setTimeout(() => setReplayState('idle'), 2000);
+    } catch (error) {
+      console.error('Failed to replay message:', error);
+      setReplayState('error');
+      setTimeout(() => setReplayState('idle'), 3000);
+    }
+  };
 
   return (
     <div className={`flex ${isOutgoing ? 'justify-start' : 'justify-end'}`}>
       <div
-        className={`max-w-[80%] rounded-2xl px-4 py-2 ${
+        className={`max-w-[80%] rounded-2xl px-4 py-2 relative ${
           isOutgoing
             ? 'bg-white border border-gray-200 text-gray-900 rounded-bl-sm'
             : 'bg-blue-600 text-white rounded-br-sm'
         }`}
       >
+        {/* Replay button for incoming messages */}
+        {isIncoming && message.content.type === 'text' && (
+          <button
+            onClick={handleReplay}
+            disabled={replayState === 'loading'}
+            className={`absolute -top-2 -right-2 p-1.5 rounded-full transition-all ${
+              replayState === 'idle'
+                ? 'bg-gray-200 hover:bg-gray-300 text-gray-600'
+                : replayState === 'loading'
+                ? 'bg-blue-500 text-white animate-spin'
+                : replayState === 'success'
+                ? 'bg-green-500 text-white'
+                : 'bg-red-500 text-white'
+            }`}
+            title={
+              replayState === 'idle'
+                ? 'Replay this message'
+                : replayState === 'loading'
+                ? 'Replaying...'
+                : replayState === 'success'
+                ? 'Replayed successfully!'
+                : 'Failed to replay'
+            }
+          >
+            {replayState === 'idle' && <RefreshCw className="w-3 h-3" />}
+            {replayState === 'loading' && <RefreshCw className="w-3 h-3" />}
+            {replayState === 'success' && <Check className="w-3 h-3" />}
+            {replayState === 'error' && <AlertCircle className="w-3 h-3" />}
+          </button>
+        )}
         {/* Message type indicator for templates/interactive */}
         {message.content.type !== 'text' && (
           <div className={`text-xs mb-1 ${isOutgoing ? 'text-gray-500' : 'text-blue-200'}`}>

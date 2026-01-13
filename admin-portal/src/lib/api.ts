@@ -249,3 +249,55 @@ export async function fetchStats(startTime: number, endTime: number): Promise<St
   }
   return response.json();
 }
+
+export interface ReplayMessageRequest {
+  messageId: string;
+  phoneNumber: string;
+  messageText: string;
+  originalTimestamp?: number;
+  contactName?: string;
+}
+
+export interface ReplayMessageResponse {
+  success: boolean;
+  message?: string;
+  error?: string;
+}
+
+export async function replayMessage(
+  messageId: string,
+  phoneNumber: string,
+  messageText: string | undefined,
+  originalTimestamp?: number,
+  contactName?: string
+): Promise<ReplayMessageResponse> {
+  if (!messageText) {
+    throw new Error('Message text is required')
+  }
+
+  const response = await fetch(`${API_URL}/admin/replay-message`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...getAuthHeaders(),
+    },
+    body: JSON.stringify({
+      messageId,
+      phoneNumber,
+      messageText,
+      originalTimestamp,
+      contactName,
+    }),
+  });
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      localStorage.removeItem('admin_username')
+      localStorage.removeItem('admin_password')
+      window.location.reload()
+    }
+    throw new Error('Failed to replay message');
+  }
+
+  return response.json();
+}

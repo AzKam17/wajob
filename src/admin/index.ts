@@ -6,6 +6,7 @@ import { ConversationRepository } from '../db/repositories/ConversationRepositor
 import { PersonalizedLinkRepository } from '../db/repositories/PersonalizedLinkRepository'
 import { cors } from '@elysiajs/cors'
 import { basicAuth } from '../middleware/basicAuth'
+import { getWhatsAppMessageQueue } from '../queues/whatsapp-message.queue'
 
 // Valid sort columns for each entity
 const jobSortColumns = ['title', 'company', 'location', 'source', 'postedDate', 'createdAt', 'updatedAt']
@@ -183,5 +184,96 @@ export const adminRoutes = new Elysia({ prefix: '/admin' })
     query: t.Object({
       startTime: t.Optional(t.String()),
       endTime: t.Optional(t.String()),
+    }),
+  })
+  .post('/replay-message', async ({ body, set }) => {
+    const { messageId, phoneNumber, messageText, contactName } = body
+
+    // Validate input
+    if (!messageId || !phoneNumber || !messageText) {
+      set.status = 400
+      return { error: 'Missing required fields: messageId, phoneNumber, messageText' }
+    }
+
+    try {
+      // Get Redis configuration from environment
+      const redisHost = process.env.REDIS_HOST || 'localhost'
+      const redisPort = parseInt(process.env.REDIS_PORT || '6379')
+      const redisPassword = process.env.REDIS_PASSWORD
+
+      // Get WhatsApp config from environment
+      const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID || ''
+      const businessAccountId = process.env.WHATSAPP_BUSINESS_ACCOUNT_ID || ''
+
+      // Get the queue instance
+      const queue = getWhatsAppMessageQueue(redisHost, redisPort, redisPassword)
+
+      // Construct WhatsApp webhook payload format
+      const webhookPayload = {
+        entry: [
+          {
+            id: 'admin-replay',
+            changes: [
+              {
+                field: 'messages',
+                value: {
+                  messaging_product: 'whatsapp',
+                  metadata: {
+                    display_phone_number: phoneNumber,
+                    phone_number_id: phoneNumberId,
+                    business_account_id: businessAccountId,
+                  },
+                  contacts: contactName
+                    ? [
+                        {
+                          profile: {
+                            name: contactName,
+                          },
+                        },
+                      ]
+                    : [],
+                  messages: [
+                    {
+                      from: phoneNumber,
+                      id: `replay-${messageId}-${Date.now()}`,
+                      timestamp: Math.floor(Date.now() / 1000).toString(),
+                      type: 'text',
+                      text: {
+                        body: messageText,
+                      },
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        ],
+      }
+
+      // Add to queue
+      await queue.add('process-message', {
+        payload: webhookPayload,
+        receivedAt: new Date().toISOString(),
+      })
+
+      return {
+        success: true,
+        message: 'Message replayed successfully',
+      }
+    } catch (error) {
+      console.error('Error replaying message:', error)
+      set.status = 500
+      return {
+        success: false,
+        error: 'Failed to replay message',
+      }
+    }
+  }, {
+    body: t.Object({
+      messageId: t.String(),
+      phoneNumber: t.String(),
+      messageText: t.String(),
+      originalTimestamp: t.Optional(t.Number()),
+      contactName: t.Optional(t.String()),
     }),
   })
