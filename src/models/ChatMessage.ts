@@ -23,11 +23,20 @@ export const ChatMessageSchema = z.object({
 
 export type ChatMessage = z.infer<typeof ChatMessageSchema>
 
+export const ConversationContextSchema = z.object({
+  phoneNumber: z.string(),
+  sessionId: z.string(),
+  welcomeSentAt: z.number().optional(),
+  lastMessageAt: z.number(),
+  lastQuery: z.string().optional(),
+  lastOffset: z.number().optional(),
+})
+
 export const ConversationSessionSchema = z.object({
   sessionId: z.string(),
   phoneNumber: z.string(),
   currentState: z.string(),
-  context: z.record(z.string(), z.unknown()),
+  context: ConversationContextSchema,
   lastMessageAt: z.number(),
   welcomeSentAt: z.number().optional(),
   createdAt: z.number(),

@@ -50,7 +50,7 @@ export class WhatsAppMessageService {
   constructor(
     private readonly conversationState: ConversationStateService,
     private readonly chatHistory: ChatHistoryService
-  ) {}
+  ) { }
 
   async handleIncomingMessage(payload: WhatsAppWebhookPayload): Promise<void> {
     try {

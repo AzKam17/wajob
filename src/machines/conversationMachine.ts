@@ -191,129 +191,17 @@ export const conversationMachine = setup({
   types: {
     context: {} as ConversationContext,
     events: {} as ConversationEvent,
+    input: {} as ConversationContext,
   },
   guards: {
     canSendWelcome: ({ context }) => {
       // Don't send welcome if already sent in this session
       return !context.welcomeSentAt
     },
-    isStaleSession: ({ context }) => {
-      const thirtyMinutes = 30 * 60 * 1000
-      return Date.now() - context.lastMessageAt > thirtyMinutes
-    },
     isPaginationRequest: ({ event }) => {
       if (event.type !== 'USER_MESSAGE') return false
       const message = event.message.toLowerCase().trim()
       return message === 'voir plus' || message === 'plus'
-    },
-    isIceBreaker: ({ event }) => {
-      if (event.type !== 'USER_MESSAGE') return false
-      const message = event.message.toLowerCase().trim()
-
-      // Exact match ice breakers
-      const exactMatches = [
-        'je cherche un emploi',
-        'emploi',
-        'travail',
-        'job',
-        'bonjour',
-        'salut',
-        'hey',
-        'hello',
-        'hi',
-        'bonsoir',
-        'ok',
-        'merci',
-        'oui',
-        'non',
-        'data',
-      ]
-
-      // Partial match phrases (if message contains these)
-      const partialMatches = [
-        "c'est pas grave",
-        'pas grave',
-        'montre moi',
-        'que sais',
-        "d'accord",
-        'daccord',
-        'ça va',
-        'ca va',
-        'comment',
-        'quoi de neuf',
-        'aide',
-        'help',
-      ]
-
-      // Check exact matches
-      if (exactMatches.includes(message)) return true
-
-      // Check partial matches
-      if (partialMatches.some(phrase => message.includes(phrase))) return true
-
-      // Check if message is very short (likely not a job search)
-      if (message.length <= 4) return true
-
-      return false
-    },
-    isIceBreakerAndSessionFresh: ({ event, context }) => {
-      if (event.type !== 'USER_MESSAGE') return false
-
-      // Check if session is stale (> 30 minutes)
-      const thirtyMinutes = 30 * 60 * 1000
-      const isStale = Date.now() - context.lastMessageAt > thirtyMinutes
-
-      // If session is stale, don't treat as ice breaker
-      if (isStale) return false
-
-      // Check if message is an ice breaker (same logic as isIceBreaker)
-      const message = event.message.toLowerCase().trim()
-
-      // Exact match ice breakers
-      const exactMatches = [
-        'je cherche un emploi',
-        'emploi',
-        'travail',
-        'job',
-        'bonjour',
-        'salut',
-        'hey',
-        'hello',
-        'hi',
-        'bonsoir',
-        'ok',
-        'merci',
-        'oui',
-        'non',
-        'data',
-      ]
-
-      // Partial match phrases
-      const partialMatches = [
-        "c'est pas grave",
-        'pas grave',
-        'montre moi',
-        'que sais',
-        "d'accord",
-        'daccord',
-        'ça va',
-        'ca va',
-        'comment',
-        'quoi de neuf',
-        'aide',
-        'help',
-      ]
-
-      // Check exact matches
-      if (exactMatches.includes(message)) return true
-
-      // Check partial matches
-      if (partialMatches.some(phrase => message.includes(phrase))) return true
-
-      // Check if message is very short (likely not a job search)
-      if (message.length <= 4) return true
-
-      return false
     },
   },
   actions: {
@@ -364,7 +252,7 @@ export const conversationMachine = setup({
 }).createMachine({
   id: 'conversation',
   initial: 'idle',
-  context: ({ input }: { input: ConversationContext }) => input,
+  context: ({ input }) => input,
   states: {
     idle: {
       on: {
@@ -407,18 +295,6 @@ export const conversationMachine = setup({
             actions: 'updateLastMessageTime',
           },
           {
-            guard: 'isStaleSession',
-            target: 'idle',
-            actions: 'resetContext',
-            description: 'Session stale, reset to idle for new welcome',
-          },
-          {
-            guard: 'isIceBreakerAndSessionFresh',
-            target: 'awaitingJobTitle',
-            actions: 'updateLastMessageTime',
-            description: 'User sent ice breaker in fresh session, stay in same state',
-          },
-          {
             target: 'searchingJobs',
             actions: 'updateLastMessageTime',
           },
@@ -435,25 +311,11 @@ export const conversationMachine = setup({
           target: 'displayingResults',
           actions: ['saveSearchContext', 'updateLastMessageTime'],
         },
-        USER_MESSAGE: [
-          {
-            guard: 'isStaleSession',
-            target: 'idle',
-            actions: 'resetContext',
-            description: 'Session stale, reset to idle for new welcome',
-          },
-          {
-            guard: 'isIceBreakerAndSessionFresh',
-            target: 'awaitingJobTitle',
-            actions: 'updateLastMessageTime',
-            description: 'User sent ice breaker, reset to awaiting',
-          },
-          {
-            // User sent another search query while searching
-            target: 'searchingJobs',
-            actions: 'updateLastMessageTime',
-          },
-        ],
+        USER_MESSAGE: {
+          // User sent another message while searching
+          target: 'searchingJobs',
+          actions: 'updateLastMessageTime',
+        },
       },
     },
     displayingResults: {
@@ -463,18 +325,6 @@ export const conversationMachine = setup({
             guard: 'isPaginationRequest',
             target: 'browsing',
             actions: 'updateLastMessageTime',
-          },
-          {
-            guard: 'isStaleSession',
-            target: 'idle',
-            actions: 'resetContext',
-            description: 'Session stale, reset to idle for new welcome',
-          },
-          {
-            guard: 'isIceBreakerAndSessionFresh',
-            target: 'awaitingJobTitle',
-            actions: 'updateLastMessageTime',
-            description: 'User sent ice breaker, reset to awaiting',
           },
           {
             // New search query
@@ -499,18 +349,6 @@ export const conversationMachine = setup({
             guard: 'isPaginationRequest',
             target: 'browsing',
             actions: 'updateLastMessageTime',
-          },
-          {
-            guard: 'isStaleSession',
-            target: 'idle',
-            actions: 'resetContext',
-            description: 'Session stale, reset to idle for new welcome',
-          },
-          {
-            guard: 'isIceBreakerAndSessionFresh',
-            target: 'awaitingJobTitle',
-            actions: 'updateLastMessageTime',
-            description: 'User sent ice breaker, reset to awaiting',
           },
           {
             // New search query
