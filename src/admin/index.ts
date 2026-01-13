@@ -13,7 +13,10 @@ const userSortColumns = ['phoneNumber', 'lastMessageAt', 'createdAt', 'updatedAt
 const conversationSortColumns = ['phoneNumber', 'messageCount', 'status', 'startedAt', 'lastActivityAt', 'createdAt']
 
 export const adminRoutes = new Elysia({ prefix: '/admin' })
-  .use(cors())
+  .use(cors({
+    origin: ['https://wajob.vercel.app', 'http://localhost:3001'],
+    credentials: true,
+  }))
   .use(basicAuth())
   .get('/jobs', async ({ query }) => {
     const jobRepo = new JobAdRepository()
