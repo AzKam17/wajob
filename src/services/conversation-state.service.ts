@@ -10,7 +10,7 @@ import { randomUUID } from 'crypto'
 
 export class ConversationStateService {
   private readonly SESSION_PREFIX = 'conversation:session:'
-  private readonly SESSION_TTL = 60 * 60 // 1 hour in seconds
+  private readonly SESSION_TTL = 30 * 60 // 30 minutes in seconds
   private readonly EXTEND_TTL_ON_MESSAGE = true
 
   // In-memory cache of active actors (for performance)
@@ -36,8 +36,8 @@ export class ConversationStateService {
           createdAt: parseInt(sessionData.createdAt),
         })
 
-        // Check if session is stale (> 1 hour old)
-        const isStale = Date.now() - session.lastMessageAt > 60 * 60 * 1000
+        // Check if session is stale (> 30 minutes old)
+        const isStale = Date.now() - session.lastMessageAt > 30 * 60 * 1000
 
         if (!isStale) {
           return session
@@ -242,11 +242,11 @@ export class ConversationStateService {
 
   // Cleanup method to remove inactive actors (call periodically)
   cleanupInactiveActors(): void {
-    const oneHourAgo = Date.now() - 60 * 60 * 1000
+    const thirtyMinutesAgo = Date.now() - 30 * 60 * 1000
 
     for (const [phoneNumber, actor] of this.actors.entries()) {
       const context = actor.getSnapshot().context
-      if (context.lastMessageAt < oneHourAgo) {
+      if (context.lastMessageAt < thirtyMinutesAgo) {
         actor.stop()
         this.actors.delete(phoneNumber)
       }

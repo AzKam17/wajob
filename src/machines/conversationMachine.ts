@@ -12,7 +12,7 @@ import { assign, setup } from 'xstate'
  * -------
  *
  * 1. idle (initial state)
- *    - First contact or session expired (> 1 hour)
+ *    - First contact or session expired (> 30 minutes)
  *    - Ready to send welcome message on first USER_MESSAGE
  *    - Transitions: → welcomed (if canSendWelcome) OR → awaitingJobTitle
  *
@@ -64,7 +64,7 @@ import { assign, setup } from 'xstate'
  *    - Updates offset for next batch of results
  *
  * 5. TIMEOUT
- *    - Session expired (> 1 hour of inactivity)
+ *    - Session expired (> 30 minutes of inactivity)
  *    - Resets conversation to idle state
  *
  * 6. RESET
@@ -81,7 +81,7 @@ import { assign, setup } from 'xstate'
  *    - KEY SOLUTION to the welcome message loop problem
  *
  * 2. isStaleSession
- *    - Checks if lastMessageAt > 10 minutes ago
+ *    - Checks if lastMessageAt > 30 minutes ago
  *    - Used to determine if session should be reset
  *
  * 3. isPaginationRequest
@@ -140,7 +140,7 @@ import { assign, setup } from 'xstate'
  * ------------
  * This machine state is persisted to Redis via ConversationStateService:
  * - Key: conversation:session:{phoneNumber}
- * - TTL: 1 hour
+ * - TTL: 30 minutes
  * - Serialized: currentState + context as JSON
  * - On each message, state is loaded, transitioned, and saved back
  *
@@ -166,7 +166,7 @@ import { assign, setup } from 'xstate'
  * 3. User sends another message → stays in awaitingJobTitle
  * 4. User goes idle 5 minutes → no state change
  * 5. User sends message → awaitingJobTitle → searchingJobs (NOT back to welcomed!)
- * 6. Session expires (1 hour) → TIMEOUT → idle → resetContext (welcomeSentAt cleared)
+ * 6. Session expires (30 minutes) → TIMEOUT → idle → resetContext (welcomeSentAt cleared)
  * 7. New session can now send welcome again
  */
 
@@ -198,8 +198,8 @@ export const conversationMachine = setup({
       return !context.welcomeSentAt
     },
     isStaleSession: ({ context }) => {
-      const tenMinutes = 10 * 60 * 1000
-      return Date.now() - context.lastMessageAt > tenMinutes
+      const thirtyMinutes = 30 * 60 * 1000
+      return Date.now() - context.lastMessageAt > thirtyMinutes
     },
     isPaginationRequest: ({ event }) => {
       if (event.type !== 'USER_MESSAGE') return false
@@ -208,6 +208,29 @@ export const conversationMachine = setup({
     },
     isIceBreaker: ({ event }) => {
       if (event.type !== 'USER_MESSAGE') return false
+      const message = event.message.toLowerCase().trim()
+      const iceBreakers = [
+        'je cherche un emploi',
+        'emploi',
+        'travail',
+        'job',
+        'bonjour',
+        'salut',
+        'hey',
+      ]
+      return iceBreakers.includes(message)
+    },
+    isIceBreakerAndSessionFresh: ({ event, context }) => {
+      if (event.type !== 'USER_MESSAGE') return false
+
+      // Check if session is stale (> 30 minutes)
+      const thirtyMinutes = 30 * 60 * 1000
+      const isStale = Date.now() - context.lastMessageAt > thirtyMinutes
+
+      // If session is stale, don't treat as ice breaker
+      if (isStale) return false
+
+      // Check if message is an ice breaker
       const message = event.message.toLowerCase().trim()
       const iceBreakers = [
         'je cherche un emploi',
@@ -312,10 +335,16 @@ export const conversationMachine = setup({
             actions: 'updateLastMessageTime',
           },
           {
-            guard: 'isIceBreaker',
+            guard: 'isStaleSession',
+            target: 'idle',
+            actions: 'resetContext',
+            description: 'Session stale, reset to idle for new welcome',
+          },
+          {
+            guard: 'isIceBreakerAndSessionFresh',
             target: 'awaitingJobTitle',
             actions: 'updateLastMessageTime',
-            description: 'User sent ice breaker, stay in same state',
+            description: 'User sent ice breaker in fresh session, stay in same state',
           },
           {
             target: 'searchingJobs',
@@ -334,11 +363,19 @@ export const conversationMachine = setup({
           target: 'displayingResults',
           actions: ['saveSearchContext', 'updateLastMessageTime'],
         },
-        USER_MESSAGE: {
-          // User sent another message while searching
-          target: 'searchingJobs',
-          actions: 'updateLastMessageTime',
-        },
+        USER_MESSAGE: [
+          {
+            guard: 'isStaleSession',
+            target: 'idle',
+            actions: 'resetContext',
+            description: 'Session stale, reset to idle for new welcome',
+          },
+          {
+            // User sent another message while searching
+            target: 'searchingJobs',
+            actions: 'updateLastMessageTime',
+          },
+        ],
       },
     },
     displayingResults: {
@@ -348,6 +385,12 @@ export const conversationMachine = setup({
             guard: 'isPaginationRequest',
             target: 'browsing',
             actions: 'updateLastMessageTime',
+          },
+          {
+            guard: 'isStaleSession',
+            target: 'idle',
+            actions: 'resetContext',
+            description: 'Session stale, reset to idle for new welcome',
           },
           {
             // New search query
@@ -372,6 +415,12 @@ export const conversationMachine = setup({
             guard: 'isPaginationRequest',
             target: 'browsing',
             actions: 'updateLastMessageTime',
+          },
+          {
+            guard: 'isStaleSession',
+            target: 'idle',
+            actions: 'resetContext',
+            description: 'Session stale, reset to idle for new welcome',
           },
           {
             // New search query
