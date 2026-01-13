@@ -246,45 +246,45 @@ Mais voici quelques opportunités similaires qui pourraient vous intéresser �
   ): Promise<void> {
     try {
       const messages = [
-        `Aucune offre pour "${searchTerm}" pour le moment ${contactName} 😔\n\nEssayez un terme plus général! 💡`,
+        `Désolé ${contactName}, je n'ai rien trouvé pour cette recherche 😔\n\nEssayez un terme plus général! 💡`,
 
-        `Désolé ${contactName}, rien trouvé pour "${searchTerm}" 🤷\n\nTentez avec un autre mot-clé? 🔍`,
+        `Aucun résultat pour le moment ${contactName} 🤷\n\nTentez avec un autre mot-clé? 🔍`,
 
-        `Pas d'offres "${searchTerm}" actuellement 😕\n\nEssayez une variante du titre ${contactName}! ✨`,
+        `Pas d'offres correspondantes actuellement 😕\n\nEssayez une variante du titre ${contactName}! ✨`,
 
-        `Rien pour "${searchTerm}" aujourd'hui ${contactName} 😔\n\nUn terme plus large pourrait aider! 💼`,
+        `Rien trouvé aujourd'hui ${contactName} 😔\n\nUn terme plus large pourrait aider! 💼`,
 
-        `Aucun résultat pour "${searchTerm}" 🙁\n\n${contactName}, reformulons ensemble? Quel est votre domaine? 🎯`,
+        `Aucun résultat pour cette recherche 🙁\n\n${contactName}, reformulons ensemble? Quel est votre domaine? 🎯`,
 
-        `Malheureusement ${contactName}, rien pour "${searchTerm}" 😞\n\nEssayez différemment! Exemple: "Marketing" plutôt que "Marketing Digital Senior" 📝`,
+        `Malheureusement ${contactName}, aucune offre disponible 😞\n\nEssayez différemment! Exemple: "Marketing" plutôt que "Marketing Digital Senior" 📝`,
 
-        `Pas de match pour "${searchTerm}" 🔍\n\n${contactName}, simplifiez votre recherche pour plus de résultats! 🚀`,
+        `Pas de match pour le moment 🔍\n\n${contactName}, simplifiez votre recherche pour plus de résultats! 🚀`,
 
-        `Rien trouvé pour "${searchTerm}" pour l'instant 😕\n\nUn mot-clé différent ${contactName}? 💭`,
+        `Rien trouvé pour l'instant 😕\n\nUn mot-clé différent ${contactName}? 💭`,
 
-        `Désolé ${contactName}, zéro offre pour "${searchTerm}" 🤷‍♂️\n\nEssayez avec votre secteur d'activité! 🏢`,
+        `Désolé ${contactName}, aucune offre actuellement 🤷‍♂️\n\nEssayez avec votre secteur d'activité! 🏢`,
 
-        `Aucune offre "${searchTerm}" disponible 😔\n\nReformulons ${contactName}? "Dev" → "Développeur" par exemple! 💡`,
+        `Aucune offre disponible 😔\n\nReformulons ${contactName}? "Dev" → "Développeur" par exemple! 💡`,
 
-        `Oups ${contactName}, rien pour "${searchTerm}" 😅\n\nUn terme plus courant pourrait marcher! ⭐`,
+        `Oups ${contactName}, rien à afficher 😅\n\nUn terme plus courant pourrait marcher! ⭐`,
 
-        `Pas d'opportunités "${searchTerm}" actuellement ${contactName} 😞\n\nTentez une autre formulation! 🔄`,
+        `Pas d'opportunités actuellement ${contactName} 😞\n\nTentez une autre formulation! 🔄`,
 
-        `Rien à afficher pour "${searchTerm}" 🙁\n\n${contactName}, dites-moi votre domaine, je vous aide! 🤝`,
+        `Rien à afficher pour le moment 🙁\n\n${contactName}, dites-moi votre domaine, je vous aide! 🤝`,
 
-        `Aucun résultat "${searchTerm}" 😕\n\nSimplifiez ${contactName}! Ex: "Comptable" au lieu de "Comptable Senior Confirmé" 📊`,
+        `Aucun résultat trouvé 😕\n\nSimplifiez ${contactName}! Ex: "Comptable" au lieu de "Comptable Senior Confirmé" 📊`,
 
-        `Pas de poste "${searchTerm}" pour le moment 😔\n\nEssayez autrement ${contactName}! 🎲`,
+        `Pas de poste actuellement 😔\n\nEssayez autrement ${contactName}! 🎲`,
 
-        `Désolé ${contactName}, "${searchTerm}" ne donne rien 🤷\n\nUne autre approche? Votre métier? 💼`,
+        `Désolé ${contactName}, rien pour cette recherche 🤷\n\nUne autre approche? Votre métier? 💼`,
 
-        `Rien actuellement pour "${searchTerm}" ${contactName} 😞\n\nVariez les mots-clés! 🔑`,
+        `Rien trouvé actuellement ${contactName} 😞\n\nVariez les mots-clés! 🔑`,
 
-        `Aucune offre correspondante à "${searchTerm}" 😕\n\n${contactName}, généralisez votre recherche! 🌟`,
+        `Aucune offre correspondante 😕\n\n${contactName}, généralisez votre recherche! 🌟`,
 
-        `Pas de résultat pour "${searchTerm}" 🙁\n\nReformulons ensemble ${contactName}? 💬`,
+        `Pas de résultat disponible 🙁\n\nReformulons ensemble ${contactName}? 💬`,
 
-        `Malheureusement rien pour "${searchTerm}" ${contactName} 😔\n\nDites-moi simplement votre secteur! 🎯`
+        `Malheureusement rien trouvé ${contactName} 😔\n\nDites-moi simplement votre secteur! 🎯`
       ]
 
       // Select a random message

@@ -489,7 +489,7 @@ export class WhatsAppMessageService {
       await this.chatHistory.saveOutgoingTextMessage(
         ctx.from,
         ctx.sessionId,
-        `No jobs found for: ${userQuery}`,
+        'No jobs found for this search',
         ctx.state
       )
     }

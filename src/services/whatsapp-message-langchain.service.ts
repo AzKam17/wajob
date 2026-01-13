@@ -393,7 +393,7 @@ export class WhatsAppMessageLangchainService {
       await this.chatHistory.saveOutgoingTextMessage(
         from,
         sessionId,
-        `No jobs found for: ${query}`,
+        'No jobs found for this search',
         'active'
       )
     }
