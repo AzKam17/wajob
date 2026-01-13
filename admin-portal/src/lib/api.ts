@@ -285,7 +285,7 @@ export async function replayMessage(
       messageId,
       phoneNumber,
       messageText,
-      originalTimestamp,
+      originalTimestamp: originalTimestamp ? Number(originalTimestamp) : undefined,
       contactName,
     }),
   });
