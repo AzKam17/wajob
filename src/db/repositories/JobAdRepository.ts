@@ -119,7 +119,7 @@ export class JobAdRepository extends BaseRepository<JobAdEntity> {
           --   OR similarity(job.company, :rawQuery) > 0.4
           -- )
         )`,
-        { tsQuery, rawQuery }
+        { tsQuery }
       )
       .addOrderBy(`CASE WHEN job."internalExtras"->>'version' = '2' THEN 0 ELSE 1 END`, 'ASC')
       .addOrderBy('job.postedDate', 'DESC')
