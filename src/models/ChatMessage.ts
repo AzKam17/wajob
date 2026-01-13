@@ -30,6 +30,8 @@ export const ConversationContextSchema = z.object({
   lastMessageAt: z.number(),
   lastQuery: z.string().optional(),
   lastOffset: z.number().optional(),
+  latestRequestId: z.string().optional(),
+  pendingDebounceTimeout: z.number().optional(),
 })
 
 export const ConversationSessionSchema = z.object({
