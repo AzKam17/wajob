@@ -29,20 +29,42 @@ export function AuthModal() {
 
         if (!storedUsername || !storedPassword) {
           setShowModal(true)
+          setIsVerifying(false)
           return
         }
 
         const credentials = btoa(`${storedUsername}:${storedPassword}`)
-        const response = await fetch(`${API_URL}/admin/stats`, {
-          headers: {
-            'Authorization': `Basic ${credentials}`
-          }
-        })
 
-        if (!response.ok) {
+        // Create abort controller for timeout
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
+
+        try {
+          // Use a simpler endpoint (conversations) instead of stats
+          const response = await fetch(`${API_URL}/admin/conversations?page=1&limit=1`, {
+            headers: {
+              'Authorization': `Basic ${credentials}`
+            },
+            signal: controller.signal
+          })
+
+          clearTimeout(timeoutId)
+
+          if (!response.ok) {
+            console.error('Auth verification failed:', response.status)
+            setShowModal(true)
+          }
+        } catch (fetchErr) {
+          clearTimeout(timeoutId)
+          if ((fetchErr as Error).name === 'AbortError') {
+            console.error('Auth verification timed out')
+          } else {
+            console.error('Auth verification error:', fetchErr)
+          }
           setShowModal(true)
         }
       } catch (err) {
+        console.error('Auth verification outer error:', err)
         setShowModal(true)
       } finally {
         setIsVerifying(false)
@@ -60,25 +82,44 @@ export function AuthModal() {
     try {
       // Verify credentials with backend
       const credentials = btoa(`${username}:${password}`)
-      const response = await fetch(`${API_URL}/admin/stats`, {
-        headers: {
-          'Authorization': `Basic ${credentials}`
+
+      // Create abort controller for timeout
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
+
+      try {
+        // Use a simpler endpoint (conversations) instead of stats
+        const response = await fetch(`${API_URL}/admin/conversations?page=1&limit=1`, {
+          headers: {
+            'Authorization': `Basic ${credentials}`
+          },
+          signal: controller.signal
+        })
+
+        clearTimeout(timeoutId)
+
+        if (!response.ok) {
+          setError('Invalid username or password')
+          setIsVerifying(false)
+          return
         }
-      })
 
-      if (!response.ok) {
-        setError('Invalid username or password')
+        // Credentials are valid, save them
+        setCredentials(username, password)
+        setShowModal(false)
+        setUsername('')
+        setPassword('')
+      } catch (fetchErr) {
+        clearTimeout(timeoutId)
+        if ((fetchErr as Error).name === 'AbortError') {
+          setError('Connection timeout. Please check your network and try again.')
+        } else {
+          setError('Failed to verify credentials. Please check your connection.')
+        }
         setIsVerifying(false)
-        return
       }
-
-      // Credentials are valid, save them
-      setCredentials(username, password)
-      setShowModal(false)
-      setUsername('')
-      setPassword('')
     } catch (err) {
-      setError('Failed to verify credentials. Please check your connection.')
+      setError('An unexpected error occurred. Please try again.')
       setIsVerifying(false)
     }
   }
