@@ -78,7 +78,17 @@ export class JobAdRepository extends BaseRepository<JobAdEntity> {
 
   /**
    * Search jobs using PostgreSQL full-text search with French language support
-   * Uses ts_vector and ts_query for better search quality
+   * and fuzzy matching for typo tolerance
+   *
+   * Search Strategy:
+   * 1. Full-text search (primary): Uses ts_vector and ts_query for exact word matching
+   * 2. Fuzzy search (fallback): Uses trigram similarity to catch typos and similar strings
+   *
+   * Fuzzy Search Configuration:
+   * - Fields: title, description, company
+   * - Similarity threshold: 0.3 (30%)
+   * - Examples: "Comptabel" → "Comptable", "Developeur" → "Développeur"
+   *
    * @param query - Search query
    * @param limit - Maximum number of results (default: 3)
    * @param offset - Pagination offset (default: 0)
@@ -86,19 +96,30 @@ export class JobAdRepository extends BaseRepository<JobAdEntity> {
   async searchByQuery(query: string, limit: number = 3, offset: number = 0): Promise<JobAd[]> {
     // Prepare the query for ts_query (handle multiple words and French text)
     const tsQuery = query.trim().split(/\s+/).join(' & ')
+    const rawQuery = query.trim()
 
     const entities = await this.repository
       .createQueryBuilder('job')
       .where('job.deletedAt IS NULL')
       .andWhere(
         `(
-          to_tsvector('french', COALESCE(job.title, '')) ||
-          to_tsvector('french', COALESCE(job.description, '')) ||
-          to_tsvector('french', COALESCE(job.company, '')) ||
-          to_tsvector('french', COALESCE(job.location, '')) ||
-          to_tsvector('french', COALESCE(job."pageMetadata"::text, ''))
-        ) @@ to_tsquery('french', :tsQuery)`,
-        { tsQuery }
+          -- Full-text search (primary)
+          (
+            to_tsvector('french', COALESCE(job.title, '')) ||
+            to_tsvector('french', COALESCE(job.description, '')) ||
+            to_tsvector('french', COALESCE(job.company, '')) ||
+            to_tsvector('french', COALESCE(job.location, '')) ||
+            to_tsvector('french', COALESCE(job."pageMetadata"::text, ''))
+          ) @@ to_tsquery('french', :tsQuery)
+          OR
+          -- Fuzzy search using trigram similarity (catches typos and similar strings)
+          (
+            similarity(job.title, :rawQuery) > 0.3
+            OR similarity(job.description, :rawQuery) > 0.3
+            OR similarity(job.company, :rawQuery) > 0.3
+          )
+        )`,
+        { tsQuery, rawQuery }
       )
       .addOrderBy(`CASE WHEN job."internalExtras"->>'version' = '2' THEN 0 ELSE 1 END`, 'ASC')
       .addOrderBy('job.postedDate', 'DESC')
