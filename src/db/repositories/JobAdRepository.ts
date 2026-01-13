@@ -86,7 +86,7 @@ export class JobAdRepository extends BaseRepository<JobAdEntity> {
    *
    * Fuzzy Search Configuration:
    * - Fields: title, description, company
-   * - Similarity threshold: 0.3 (30%)
+   * - Similarity threshold: 0.4 (40%) - strict matching
    * - Examples: "Comptabel" → "Comptable", "Developeur" → "Développeur"
    *
    * @param query - Search query
@@ -114,9 +114,9 @@ export class JobAdRepository extends BaseRepository<JobAdEntity> {
           OR
           -- Fuzzy search using trigram similarity (catches typos and similar strings)
           (
-            similarity(job.title, :rawQuery) > 0.3
-            OR similarity(job.description, :rawQuery) > 0.3
-            OR similarity(job.company, :rawQuery) > 0.3
+            similarity(job.title, :rawQuery) > 0.4
+            OR similarity(job.description, :rawQuery) > 0.4
+            OR similarity(job.company, :rawQuery) > 0.4
           )
         )`,
         { tsQuery, rawQuery }
