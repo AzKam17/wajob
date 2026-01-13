@@ -111,13 +111,13 @@ export class JobAdRepository extends BaseRepository<JobAdEntity> {
             to_tsvector('french', COALESCE(job.location, '')) ||
             to_tsvector('french', COALESCE(job."pageMetadata"::text, ''))
           ) @@ to_tsquery('french', :tsQuery)
-          OR
+          -- OR
           -- Fuzzy search using trigram similarity (catches typos and similar strings)
-          (
-            similarity(job.title, :rawQuery) > 0.4
-            OR similarity(job.description, :rawQuery) > 0.4
-            OR similarity(job.company, :rawQuery) > 0.4
-          )
+          -- (
+          --   similarity(job.title, :rawQuery) > 0.4
+          --   OR similarity(job.description, :rawQuery) > 0.4
+          --   OR similarity(job.company, :rawQuery) > 0.4
+          -- )
         )`,
         { tsQuery, rawQuery }
       )
