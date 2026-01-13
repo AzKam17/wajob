@@ -266,6 +266,29 @@ export class WhatsAppMessageLangchainService {
     offset: number,
     existingUser: any
   ): Promise<void> {
+    // Send processing message to user
+    if (offset === 0) {
+      // First search
+      const searchingMessages = [
+        '🔍 Recherche en cours...',
+        '⏳ Je cherche pour vous...',
+        '🔎 Analyse des offres disponibles...',
+        '💼 Recherche des meilleures opportunités...',
+      ]
+      const randomMessage = searchingMessages[Math.floor(Math.random() * searchingMessages.length)]
+      await this.botMessages.sendTextMessage(from, randomMessage)
+    } else {
+      // Pagination
+      const paginationMessages = [
+        '🔍 Recherche d\'autres offres...',
+        '⏳ Je cherche plus d\'opportunités...',
+        '🔎 Chargement d\'autres résultats...',
+        '💼 Recherche de nouvelles offres similaires...',
+      ]
+      const randomMessage = paginationMessages[Math.floor(Math.random() * paginationMessages.length)]
+      await this.botMessages.sendTextMessage(from, randomMessage)
+    }
+
     const jobs = await this.jobSearch.searchJobs(query, from, offset)
 
     Logger.info('[Langchain] Jobs retrieved from search', {
