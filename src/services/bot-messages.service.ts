@@ -246,45 +246,45 @@ Mais voici quelques opportunités similaires qui pourraient vous intéresser �
   ): Promise<void> {
     try {
       const messages = [
-        `Désolé ${contactName}, je n'ai rien trouvé pour cette recherche 😔\n\nEssayez un terme plus général! 💡`,
+        `Désolé ${contactName}, aucune offre trouvée 😔\n\nEntrez simplement le titre du poste recherché! Ex: "Comptable", "Chauffeur" 💼`,
 
-        `Aucun résultat pour le moment ${contactName} 🤷\n\nTentez avec un autre mot-clé? 🔍`,
+        `Aucun résultat ${contactName} 🤷\n\nEssayez juste le nom du métier! Ex: "Secrétaire", "Plombier" 🔍`,
 
-        `Pas d'offres correspondantes actuellement 😕\n\nEssayez une variante du titre ${contactName}! ✨`,
+        `Pas d'offres correspondantes 😕\n\nTapez seulement l'intitulé du poste ${contactName}! Ex: "Informaticien", "Cuisinier" ✨`,
 
-        `Rien trouvé aujourd'hui ${contactName} 😔\n\nUn terme plus large pourrait aider! 💼`,
+        `Rien trouvé ${contactName} 😔\n\nUn seul mot suffit! Ex: "Vendeur", "Mécanicien", "Infirmier" 💡`,
 
-        `Aucun résultat pour cette recherche 🙁\n\n${contactName}, reformulons ensemble? Quel est votre domaine? 🎯`,
+        `Aucun résultat pour cette recherche 🙁\n\n${contactName}, entrez juste le métier! Ex: "Électricien", "Caissier" 🎯`,
 
-        `Malheureusement ${contactName}, aucune offre disponible 😞\n\nEssayez différemment! Exemple: "Marketing" plutôt que "Marketing Digital Senior" 📝`,
+        `Malheureusement ${contactName}, aucune offre disponible 😞\n\nTentez avec le titre du poste uniquement! Ex: "Développeur" au lieu de "Développeur Senior Confirmé" 📝`,
 
-        `Pas de match pour le moment 🔍\n\n${contactName}, simplifiez votre recherche pour plus de résultats! 🚀`,
+        `Pas de match pour le moment 🔍\n\n${contactName}, simplifiez! Juste le nom du poste: "Gardien", "Agent" 🚀`,
 
-        `Rien trouvé pour l'instant 😕\n\nUn mot-clé différent ${contactName}? 💭`,
+        `Rien trouvé pour l'instant 😕\n\nEntrez le métier seul ${contactName}! Ex: "Commercial", "Logisticien" 💭`,
 
-        `Désolé ${contactName}, aucune offre actuellement 🤷‍♂️\n\nEssayez avec votre secteur d'activité! 🏢`,
+        `Désolé ${contactName}, aucune offre actuellement 🤷‍♂️\n\nTapez simplement votre profession! Ex: "Comptable", "Technicien" 🏢`,
 
-        `Aucune offre disponible 😔\n\nReformulons ${contactName}? "Dev" → "Développeur" par exemple! 💡`,
+        `Aucune offre disponible 😔\n\nEssayez juste l'intitulé ${contactName}! Ex: "Graphiste", "Architecte" 💡`,
 
-        `Oups ${contactName}, rien à afficher 😅\n\nUn terme plus courant pourrait marcher! ⭐`,
+        `Oups ${contactName}, rien à afficher 😅\n\nUn mot simple suffit! Ex: "Professeur", "Réceptionniste" ⭐`,
 
-        `Pas d'opportunités actuellement ${contactName} 😞\n\nTentez une autre formulation! 🔄`,
+        `Pas d'opportunités actuellement ${contactName} 😞\n\nEntrez uniquement le poste! Ex: "Assistant", "Responsable" 🔄`,
 
-        `Rien à afficher pour le moment 🙁\n\n${contactName}, dites-moi votre domaine, je vous aide! 🤝`,
+        `Rien à afficher pour le moment 🙁\n\n${contactName}, tapez juste le métier! Ex: "Gérant", "Manager" 🤝`,
 
-        `Aucun résultat trouvé 😕\n\nSimplifiez ${contactName}! Ex: "Comptable" au lieu de "Comptable Senior Confirmé" 📊`,
+        `Aucun résultat trouvé 😕\n\nSoyez bref ${contactName}! Ex: "Maçon" plutôt que "Maçon expérimenté avec références" 📊`,
 
-        `Pas de poste actuellement 😔\n\nEssayez autrement ${contactName}! 🎲`,
+        `Pas de poste actuellement 😔\n\nEssayez le titre simple ${contactName}! Ex: "Peintre", "Soudeur" 🎲`,
 
-        `Désolé ${contactName}, rien pour cette recherche 🤷\n\nUne autre approche? Votre métier? 💼`,
+        `Désolé ${contactName}, rien pour cette recherche 🤷\n\nTapez seulement votre métier! Ex: "Ingénieur", "Consultant" 💼`,
 
-        `Rien trouvé actuellement ${contactName} 😞\n\nVariez les mots-clés! 🔑`,
+        `Rien trouvé actuellement ${contactName} 😞\n\nUn seul mot-clé! Ex: "Pharmacien", "Analyste" 🔑`,
 
-        `Aucune offre correspondante 😕\n\n${contactName}, généralisez votre recherche! 🌟`,
+        `Aucune offre correspondante 😕\n\n${contactName}, simplifiez votre recherche! Ex: "Designer", "Avocat" 🌟`,
 
-        `Pas de résultat disponible 🙁\n\nReformulons ensemble ${contactName}? 💬`,
+        `Pas de résultat disponible 🙁\n\nEntrez juste le poste ${contactName}! Ex: "Menuisier", "Enseignant" 💬`,
 
-        `Malheureusement rien trouvé ${contactName} 😔\n\nDites-moi simplement votre secteur! 🎯`
+        `Malheureusement rien trouvé ${contactName} 😔\n\nTapez simplement le métier recherché! Ex: "Médecin", "Directeur" 🎯`
       ]
 
       // Select a random message
