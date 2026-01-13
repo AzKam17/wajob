@@ -48,6 +48,7 @@ export class PersonalizedLinkRepository extends BaseRepository<PersonalizedLinkE
         WHERE "deletedAt" IS NULL
           AND EXTRACT(EPOCH FROM (click->>'timestamp')::timestamp) * 1000 >= $2
           AND EXTRACT(EPOCH FROM (click->>'timestamp')::timestamp) * 1000 <= $3
+          AND "phoneNumber" != '22579136356'
         GROUP BY bucket
         ORDER BY bucket ASC
       `, [bucketSize, startTime, endTime])
@@ -80,6 +81,7 @@ export class PersonalizedLinkRepository extends BaseRepository<PersonalizedLinkE
         WHERE "deletedAt" IS NULL
           AND EXTRACT(EPOCH FROM (click->>'timestamp')::timestamp) * 1000 >= $1
           AND EXTRACT(EPOCH FROM (click->>'timestamp')::timestamp) * 1000 <= $2
+          AND "phoneNumber" != '22579136356'
         GROUP BY device
         ORDER BY count DESC
       `, [startTime, endTime])

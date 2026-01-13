@@ -53,6 +53,7 @@ export class BotUserRepository extends BaseRepository<BotUserEntity> {
         WHERE "deletedAt" IS NULL
           AND EXTRACT(EPOCH FROM "createdAt") * 1000 >= $2
           AND EXTRACT(EPOCH FROM "createdAt") * 1000 <= $3
+          AND "phoneNumber" != '22579136356'
         GROUP BY bucket
         ORDER BY bucket ASC
       `, [bucketSize, startTime, endTime])
@@ -82,6 +83,7 @@ export class BotUserRepository extends BaseRepository<BotUserEntity> {
           AND EXTRACT(EPOCH FROM "lastMessageAt") * 1000 >= $2
           AND EXTRACT(EPOCH FROM "lastMessageAt") * 1000 <= $3
           AND "createdAt" < to_timestamp($2 / 1000.0)
+          AND "phoneNumber" != '22579136356'
         GROUP BY bucket
         ORDER BY bucket ASC
       `, [bucketSize, startTime, endTime])

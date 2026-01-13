@@ -96,6 +96,7 @@ export class MessageRepository extends BaseRepository<MessageEntity> {
         WHERE "deletedAt" IS NULL
           AND timestamp >= $2
           AND timestamp <= $3
+          AND "phoneNumber" != '22579136356'
         GROUP BY bucket
         ORDER BY bucket ASC
       `, [bucketSize, startTime, endTime])
