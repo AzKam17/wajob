@@ -227,7 +227,7 @@ export default function StatsPage() {
                       cx="50%"
                       cy="50%"
                       outerRadius={150}
-                      label={(entry) => `${entry.device}: ${entry.count}`}
+                      label={(entry) => `${entry.payload.device}: ${entry.payload.count}`}
                     >
                       {stats.deviceBreakdown.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
