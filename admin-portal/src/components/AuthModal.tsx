@@ -14,64 +14,11 @@ export function AuthModal() {
   const [showModal, setShowModal] = useState(false)
 
   useEffect(() => {
-    // Check if credentials are valid on mount
-    const verifyCredentials = async () => {
-      if (!isAuthenticated) {
-        setShowModal(true)
-        return
-      }
-
-      // Try to verify with a test API call
-      setIsVerifying(true)
-      try {
-        const storedUsername = localStorage.getItem('admin_username')
-        const storedPassword = localStorage.getItem('admin_password')
-
-        if (!storedUsername || !storedPassword) {
-          setShowModal(true)
-          setIsVerifying(false)
-          return
-        }
-
-        const credentials = btoa(`${storedUsername}:${storedPassword}`)
-
-        // Create abort controller for timeout
-        const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
-
-        try {
-          // Use a simpler endpoint (conversations) instead of stats
-          const response = await fetch(`${API_URL}/admin/conversations?page=1&limit=1`, {
-            headers: {
-              'Authorization': `Basic ${credentials}`
-            },
-            signal: controller.signal
-          })
-
-          clearTimeout(timeoutId)
-
-          if (!response.ok) {
-            console.error('Auth verification failed:', response.status)
-            setShowModal(true)
-          }
-        } catch (fetchErr) {
-          clearTimeout(timeoutId)
-          if ((fetchErr as Error).name === 'AbortError') {
-            console.error('Auth verification timed out')
-          } else {
-            console.error('Auth verification error:', fetchErr)
-          }
-          setShowModal(true)
-        }
-      } catch (err) {
-        console.error('Auth verification outer error:', err)
-        setShowModal(true)
-      } finally {
-        setIsVerifying(false)
-      }
+    // Simple check: just show modal if not authenticated
+    // Don't verify on mount - let the actual API calls handle invalid credentials
+    if (!isAuthenticated) {
+      setShowModal(true)
     }
-
-    verifyCredentials()
   }, [isAuthenticated])
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -109,6 +56,7 @@ export function AuthModal() {
         setShowModal(false)
         setUsername('')
         setPassword('')
+        setIsVerifying(false)
       } catch (fetchErr) {
         clearTimeout(timeoutId)
         if ((fetchErr as Error).name === 'AbortError') {
